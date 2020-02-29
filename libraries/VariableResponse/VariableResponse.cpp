@@ -11,8 +11,8 @@ VariableResponse::VariableResponse(float& monitorVar, float min, float max)
 
 void VariableResponse::SetResponseCurve(const Curve& curve)
 {
-    // Just copy its ass
-    m_Curve = curve;
+    // Just deep copy its ass
+    m_Curve.Clone(curve);
 }
 
 void VariableResponse::ResetRange(float newMin, float newMax)

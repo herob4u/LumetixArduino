@@ -3,8 +3,9 @@
 
 #include "Curve.h"
 
+#define KARR_LEN(x) (sizeof(x)/sizeof(Key))
 /* Response of White light in response to changes to a parameterized value t*/
-static Key W_CoolWarmResponse[4]
+static Key W_CoolWarmResponse[]
 {
     {0, 0.05},
     {0.25, 0.08},

@@ -1,5 +1,7 @@
 #ifndef CURVE_H
 #define CURVE_H
+#include <stddef.h>
+#include <stdlib.h>
 
 #define SLACK (2)
 struct Key
@@ -16,7 +18,10 @@ class Curve
 public:
     Curve(size_t capacity);
     Curve(Key* keys, size_t count);
+    Curve(const Curve& Other);
     ~Curve();
+
+    void Clone(const Curve& Other);
 
     /* Add a new key to the curve, ensuring values are unique */
     void AddKey(float alpha, float value);
@@ -42,6 +47,7 @@ private:
     void Resize(size_t newCapacity);
     void Insert(Key k, int atIdx);
     void Remove(int atIdx);
+    void Swap(Key& A, Key& B);
 private:
     
     // Well.... can't use STL containers with Arduino so, here we go

@@ -1,6 +1,16 @@
 #include "Curve.h"
 #include <assert.h>
-#include <cstring>
+//#include <cstring>
+
+/* Because we can't include cstring for some reason. Thanks Arduino */
+static void* memcpy(void* dest, void* src, size_t len)
+{
+    char *d = (char*)dest;
+    const char *s = (char*)src;
+    while(len--)
+        *d++ = *s++;
+    return dest;
+}
 
 namespace Interp
 {
@@ -30,7 +40,7 @@ Curve::Curve(size_t capacity)
     : m_Capacity(capacity)
 {
     assert(capacity > 2);
-    m_Keys = (Key*)calloc(sizeof(Key) * capacity);
+    m_Keys = (Key*)calloc(capacity, sizeof(Key));
 
     m_Keys[0] = {0.f, 0.f};
     m_Keys[1] = {1.f, 0.f};
@@ -43,11 +53,18 @@ Curve::Curve(Key* keys, size_t count)
     assert(keys && count > 2);
     if(keys)
     {
-        m_Keys = (Key*)calloc(sizeof(Key) * count * SLACK);
+        m_Keys = (Key*)calloc(count * SLACK, sizeof(Key));
 
-        memcpy(m_Keys, keys, sizeof(Key) * count);
+        memcpy(m_Keys, keys, count);
         m_NumKeys = count;
     }
+}
+
+Curve::Curve(const Curve& Other)
+{
+    m_Keys = Other.m_Keys;
+    m_Capacity = Other.m_Capacity;
+    m_NumKeys = Other.m_NumKeys;
 }
 
 Curve::~Curve()
@@ -55,6 +72,22 @@ Curve::~Curve()
     assert(m_Keys);
     free(m_Keys);
     m_Keys = nullptr;
+}
+
+void Curve::Clone(const Curve& Other)
+{
+    if(m_Keys)
+    {
+        free(m_Keys);
+        m_Keys = nullptr;
+    }
+
+    m_Keys = (Key*)calloc(Other.m_Capacity, sizeof(Key));
+
+    memcpy(m_Keys, Other.m_Keys, Other.m_NumKeys);
+
+    m_Capacity = Other.m_Capacity;
+    m_NumKeys = Other.m_NumKeys;
 }
 
 void Curve::AddKey(float alpha, float value)
@@ -110,7 +143,7 @@ void Curve::RemoveKey(int atIdx)
     Remove(atIdx);
 }
 
-float Curve::Evaluate(float t, bool linear = false) const
+float Curve::Evaluate(float t, bool linear) const
 {
     int begin = 0;
     int end = 0;
@@ -166,7 +199,7 @@ void Curve::Rebuild()
         Insert(k, 0);
     }
 
-    if(m_Keys[m_NumKeys - 1] != 1.f)
+    if(m_Keys[m_NumKeys - 1].Alpha != 1.f)
     {
         Key k = { 1, m_Keys[m_NumKeys - 1].Value };
         Insert(k, m_NumKeys-1);
@@ -208,7 +241,7 @@ void Curve::Remove(int atIdx)
     // Bubbles out the removed element
     for(int i = atIdx; i < m_NumKeys; i++)
     {
-        Swap(i, i+1);
+        Swap(m_Keys[i], m_Keys[i+1]);
     }
 }
 
@@ -223,9 +256,9 @@ void Curve::Resize(size_t newCapacity)
 {
     assert(newCapacity > (m_NumKeys + 1));
 
-    Key* newKeys = (Key*)calloc(sizeof(Key) * newCapacity);
+    Key* newKeys = (Key*)calloc(newCapacity, sizeof(Key));
 
-    memcpy(newKeys, m_Keys, sizeof(Key) * m_NumKeys);
+    memcpy(newKeys, m_Keys, m_NumKeys);
 
     free(m_Keys);
     m_Keys = newKeys;
