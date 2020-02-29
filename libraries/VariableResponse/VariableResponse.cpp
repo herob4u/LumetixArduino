@@ -1,5 +1,10 @@
 #include "VariableResponse.h"
 
+static inline float Clamp(float val, float min, float max)
+{
+	return val < min ? min : val > max ? max : val;	
+}
+
 VariableResponse::VariableResponse(float& monitorVar, float min, float max)
     : m_Curve(Curve(4))
     , m_MonitorVar(monitorVar)
@@ -23,6 +28,6 @@ void VariableResponse::ResetRange(float newMin, float newMax)
 
 float VariableResponse::GetValue() const
 {
-    const float t = (m_MonitorVar - m_MinVal)/(m_MaxVal - m_MinVal);
+    const float t = Clamp( (m_MonitorVar - m_MinVal)/(m_MaxVal - m_MinVal), 0, 1);
     return m_Curve.Evaluate(t);
 }

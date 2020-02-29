@@ -41,6 +41,7 @@ public:
     float Evaluate(float t, bool linear = false) const;
 
     size_t GetNumKeys() { return m_NumKeys; }
+    Key* DebugGetKeys() { return m_Keys; }
 
 private:
     /* Operations on key vector */

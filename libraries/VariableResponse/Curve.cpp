@@ -1,6 +1,7 @@
 #include "Curve.h"
 #include <assert.h>
 //#include <cstring>
+#include <HardwareSerial.h>
 
 /* Because we can't include cstring for some reason. Thanks Arduino */
 static void* memcpy(void* dest, void* src, size_t len)
@@ -55,8 +56,13 @@ Curve::Curve(Key* keys, size_t count)
     {
         m_Keys = (Key*)calloc(count * SLACK, sizeof(Key));
 
-        memcpy(m_Keys, keys, count);
+        //memcpy(m_Keys, keys, count);
         m_NumKeys = count;
+        
+        for(int i = 0; i < m_NumKeys; i++)
+        {
+        	m_Keys[i] = keys[i];
+		}
     }
 }
 
@@ -82,9 +88,20 @@ void Curve::Clone(const Curve& Other)
         m_Keys = nullptr;
     }
 
-    m_Keys = (Key*)calloc(Other.m_Capacity, sizeof(Key));
+    m_Keys = (Key*)malloc(Other.m_Capacity * sizeof(Key));
+	m_Keys = Other.m_Keys;
 
-    memcpy(m_Keys, Other.m_Keys, Other.m_NumKeys);
+    for(int i = 0; i < Other.m_NumKeys; i++)
+    {
+    	//Key newKey;
+    	//newKey.Alpha = Other.m_Keys[i].Alpha;
+    	//newKey.Value = Other.m_Keys[i].Value;
+    	
+    	//m_Keys[i].Alpha = Other.m_Keys[i].Alpha;
+    	//m_Keys[i].Value = Other.m_Keys[i].Value;
+    	Serial.print("Copied: "); Serial.println(m_Keys[i].Alpha);
+	}
+    //memcpy(m_Keys, Other.m_Keys, Other.m_NumKeys);
 
     m_Capacity = Other.m_Capacity;
     m_NumKeys = Other.m_NumKeys;
@@ -159,9 +176,12 @@ float Curve::Evaluate(float t, bool linear) const
         }
         begin = i;
     }
+	
+//	Serial.print("Begin: "); Serial.println(begin);
+//	Serial.print("End: "); Serial.println(end);
 
-    const Key& k1 = m_Keys[begin];
-    const Key& k2 = m_Keys[end];
+    Key k1 = m_Keys[begin];
+    Key k2 = m_Keys[end];
     const float local_t = (t - k1.Alpha)/(k2.Alpha - k1.Alpha);
     if(linear)
     {
@@ -176,6 +196,11 @@ float Curve::Evaluate(float t, bool linear) const
             k0 = m_Keys[begin-1];
         if(end < m_NumKeys-1)
             k3 = m_Keys[end+1];
+
+//		Serial.print("k0: "); Serial.println(k0.Value);
+//		Serial.print("k1: "); Serial.println(k1.Value);
+//		Serial.print("k2: "); Serial.println(k2.Value);
+//		Serial.print("k3: "); Serial.println(k3.Value);
 
         return Interp::Cubic(k0.Value, k1.Value, k2.Value, k3.Value, local_t);
     }
@@ -255,11 +280,15 @@ void Curve::Swap(Key& A, Key& B)
 void Curve::Resize(size_t newCapacity)
 {
     assert(newCapacity > (m_NumKeys + 1));
-
+    
     Key* newKeys = (Key*)calloc(newCapacity, sizeof(Key));
 
-    memcpy(newKeys, m_Keys, m_NumKeys);
-
+    //memcpy(newKeys, m_Keys, m_NumKeys);
+	for(int i = 0; i < m_NumKeys; i++)
+	{
+		newKeys[i] = m_Keys[i];
+	}
+	
     free(m_Keys);
     m_Keys = newKeys;
 }
