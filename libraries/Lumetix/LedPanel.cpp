@@ -3,13 +3,20 @@
 #include "HardwareSerial.h"
 
 #define CLAMP(val, min, max) (val < min ? min : val > max ? max : val)
+
+ELedColor LedPanel::m_ColorMap[] =
+{
+    WHITE, WHITE, YELLOW, RED, GREEN, BLUE, YELLOW, WHITE,
+    WHITE, YELLOW, BLUE, GREEN, RED, YELLOW, WHITE, WHITE
+};
+
 static float Lerp(float A, float B, float t)
 {
     return (1-t)*A + t*B;
 }
 
 LedPanel::LedPanel(TLC59116Manager& tlcmanager)
-    : m_TransitionSpeed = 1.f
+    : m_TransitionSpeed(1.f)
     , m_TlcManager(tlcmanager)
 {
     if(tlcmanager.device_count() != EPanel::MAX_VAL)
@@ -32,6 +39,7 @@ LedPanel::LedPanel(TLC59116Manager& tlcmanager)
 void LedPanel::Update(float deltaTime)
 {
     UpdateLedBuffer(deltaTime);
+    Serial.println("Update");
 }
 
 void LedPanel::SetTransitionSpeed(float scalar)
@@ -122,10 +130,26 @@ void LedPanel::UpdateLedBuffer(float deltaTime)
         for(int i = 0; i < NUM_CHANNELS; i++)
         {
             /* Simple linear interpolation of values */
-            byte newIntensity = Lerp(m_PrevLedBuffer[panel][i], m_LedBuffer[panel][i], deltaTime * m_TransitionSpeed);
+            byte newIntensity = Lerp(m_CurrLedBuffer[panel][i], m_LedBuffer[panel][i], deltaTime * m_TransitionSpeed);
             m_CurrLedBuffer[panel][i] = newIntensity;
 
             m_TlcManager[panel].pwm(i, newIntensity);
+        }
+    }
+}
+
+void LedPanel::TurnOff(bool bImmediate)
+{
+    for(int panel = 0; panel < EPanel::MAX_VAL; panel++)
+    {
+        for(int i = 0; i < NUM_CHANNELS; i++)
+        {
+            m_LedBuffer[panel][i] = 0;
+            
+            if(bImmediate)
+            {
+                m_CurrLedBuffer[panel][i] = 0.f;
+            }
         }
     }
 }

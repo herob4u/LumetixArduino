@@ -42,20 +42,17 @@ public:
     void Update(float deltaTime);
     void SetTransitionSpeed(float scalar);
 
-    void SetBrightness(ELedColor color, byte brightness, EUpdateMode updateMode = EUpdateMode::ZERO_UNSELECTED);
-    void SetBrightness(EPanel panel, ELedColor color, byte brightness, EUpdateMode updateMode = EUpdateMode::ZERO_UNSELECTED);
-    void SetBrightness(EPanel panel, byte brightness, EUpdateMode updateMode = EUpdateMode::ZERO_UNSELECTED);
-    void SetBrightness(byte brightness, EUpdateMode updateMode = EUpdateMode::ZERO_UNSELECTED);
+    void SetBrightness(ELedColor color, byte brightness, EUpdateMode updateMode = EUpdateMode::IGNORE_UNSELECTED);
+    void SetBrightness(EPanel panel, ELedColor color, byte brightness, EUpdateMode updateMode = EUpdateMode::IGNORE_UNSELECTED);
+    void SetBrightness(EPanel panel, byte brightness, EUpdateMode updateMode = EUpdateMode::IGNORE_UNSELECTED);
+    void SetBrightness(byte brightness, EUpdateMode updateMode = EUpdateMode::IGNORE_UNSELECTED);
 
+    void TurnOff(bool bImmediate = false);
 private:
     byte BlendBrightness(byte prevVal, byte newVal, EUpdateMode updateMode) const;
     void UpdateLedBuffer(float deltaTime);
 private:
-    static ELedColor m_ColorMap[16] = 
-    {
-        WHITE, WHITE, YELLOW, RED, GREEN, BLUE, YELLOW, WHITE,
-        WHITE, YELLOW, BLUE, GREEN, RED, YELLOW, WHITE, WHITE
-    };
+    static ELedColor m_ColorMap[NUM_CHANNELS];
 
     /*  The LedBuffer represents the target values of intensities for all LEDs
     *   Conversely, the Current buffer represents the current values being interpolated.

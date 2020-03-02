@@ -1,3 +1,4 @@
+#include <LedPanel.h>
 #include <VariableResponse.h>
 #include <ResponseCurves.h>
 
@@ -26,8 +27,8 @@ static const float buffer = 0.2;
 static const float maxWarm = 5.0;
 static const float maxCool = 0.0;
 
-static float _min = 1.5;
-static float _max = 3.5;
+static float _min = 2;
+static float _max = 4.2;
 static float RBf = _min;
 static float Rf = 1;
 /* Variable Responses */
@@ -39,7 +40,10 @@ static int bIsPaused = 0;
 // Declare sensor object
 SFE_ISL29125 RGB_sensor;
 
+/* GLOBAL SYSTEMS */
 TLC59116Manager tlcmanager;
+LedPanel* ledPanel = nullptr;
+float g_CurrTime = 0;
 
 byte ledBuffer[4][CHANNELS_COUNT];
 
@@ -47,48 +51,7 @@ byte white_channels[6] = {7, 1, 0, 15, 14, 8};
 byte yellow_channels[4] = {6, 2, 13, 9};
 byte red_channels[] = {3, 12};
 
-/* Example test code to demonstrate curve usage
-#include "VariableResponse.h"
-#include "ResponseCurves.h"
 
-static float RfBf = 0;
-static VariableResponse ledResponse(RfBf, 1.5, 3.5); // Will monitor RfBf and give us an intensity response based on its current value
-
-void setup()
-{
-    // Create some curves. Here, I am making one out of an existing template. #DataDrivenDesign
-    Curve whiteResponseCurve(W_CoolWarmResponse, sizeof(W_CoolWarmResponse)/sizeof(Key));
-    ledResponse.SetResponseCurve(whiteResponseCurve);
-
-    // If you want custom curves, either statically initialize one in ResponseCurves.h or create one on the spot
-    Curve invSquareCurve(3); // 3 being a capacity hint for how many points are in the curve
-    invSquareCurve.AddKey(0.5, 0.75);   // output = 0.75 when parameter t = 0.5
-    invSquareCurve.AddKey(1.0, 1);      // output = 1 when parameter t = 1
-
-    // Alternatively...
-    // Output that oscillates every 0.2t, looks like a triangular wave, which will be smoothed into a sinusoidal-like curve
-    static Key keys[] = 
-    {
-        {0, -1}, {0.2, 1}, {0.4, -1}, {0.6, 1}, {0.8, -1}, {1, 1}
-    };
-    
-    Curve wavyCurve(keys, sizeof(keys)/sizeof(Key));
-}
-
-void loop()
-{
-    float R = RGB_sensor.readRed();
-    float G = RGB_sensor.readGreen();
-    float B = RGB_sensor.readBlue();
-
-    RfBf = R/(G+B);
-
-    float whiteIntensity = ledResponse.GetValue();
-    
-    Light(WhitLeds, whiteIntensity);
-}
-
-*/
 static const int PACKET_SIZE = 19;
 
 void setup() 
@@ -98,7 +61,7 @@ void setup()
     Serial.flush();
 
     tlcmanager.init();
-
+    ledPanel = new LedPanel(tlcmanager);
 
     // Initialize the ISL29125 with simple configuration so it starts sampling
     if (RGB_sensor.init())
@@ -122,13 +85,7 @@ void setup()
     Y_LedResponse.SetResponseCurve(Y_ResponseCurve);
     R_LedResponse.SetResponseCurve(R_ResponseCurve);
 
-    Key* keys = W_ResponseCurve.DebugGetKeys();
-    size_t count = W_ResponseCurve.GetNumKeys();
-
-    for(int i = 0; i < count; i++)
-    {
-      Serial.print("t, value: "); Serial.print(keys[i].Alpha); Serial.print(", "); Serial.println(keys[i].Value);
-    }
+    g_CurrTime = millis()/1000.f;
     
     // Zero out all LED values (physical board inits to zero as well)
     clearLedBuffer();
@@ -235,37 +192,35 @@ void loop()
   float Y_response = Y_LedResponse.GetValue();
   float R_response = R_LedResponse.GetValue();
   
-//  Serial.print("Parameter t = "); Serial.println(W_LedResponse.DebugGetParameter());
-//  Serial.print("Response Value = "); Serial.println(W_response);
+  Serial.print("Parameter t = "); Serial.println(W_LedResponse.DebugGetParameter());
+  Serial.print("Response Value = "); Serial.println(W_response);
 //
 //  Serial.print("Parameter t2 = "); Serial.println(Y_LedResponse.DebugGetParameter());
 //  Serial.print("Response Value2 = "); Serial.println(Y_response);
 
-  Serial.print("Parameter t_red = "); Serial.println(R_LedResponse.DebugGetParameter());
+  //Serial.print("Parameter t_red = "); Serial.println(R_LedResponse.DebugGetParameter());
+
+  ledPanel->SetBrightness(ELedColor::WHITE, W_response*255);
+  ledPanel->SetBrightness(ELedColor::YELLOW, Y_response*255, EUpdateMode::IGNORE_UNSELECTED);
+  ledPanel->SetTransitionSpeed(0.4);
+  //ledPanel.SetBrightness(ELedColor::RED, R_response);
+
+  //Light(white_channels, sizeof(white_channels), W_response);
+  //Light(yellow_channels, sizeof(yellow_channels), Y_response);
+  //Light(red_channels, sizeof(red_channels), R_response);
+
+  float deltaTime = (millis()/1000.f) - g_CurrTime;
+  g_CurrTime = (millis()/1000.f);
   
-  Light(white_channels, sizeof(white_channels), W_response);
-  Light(yellow_channels, sizeof(yellow_channels), Y_response);
-  Light(red_channels, sizeof(red_channels), R_response);
-  
-  /*
-  if(delta < 0)
-  {
-      Light(yellow_channels, sizeof(yellow_channels), -delta);
-      Light(white_channels, sizeof(white_channels), 0);
-  }
-  else if (delta > 0)
-  {
-      Light(white_channels, sizeof(white_channels), delta);
-      Light(yellow_channels, sizeof(yellow_channels), 0);  
-  }
-  else
-  {
-      Light(white_channels, sizeof(white_channels), 0);
-      Light(yellow_channels, sizeof(yellow_channels), 0);  
-  }
-  */
+  ledPanel->Update(deltaTime);
+
   Serial.println();
-  delay(450);
+  delay(5);
+}
+
+static float Lerp(float A, float B, float alpha)
+{
+    return (1-alpha)*A + alpha*B;
 }
 
 void Light(byte* arr, int count, float intensity)
@@ -275,14 +230,22 @@ void Light(byte* arr, int count, float intensity)
       val = 0;
     if(val > 255)
       val = 255;
-      
+    
     Serial.print("Intensity: "); Serial.println(val);
-    for(int i = 0; i < count ; i++)
+    const int device_count = tlcmanager.device_count();
+  
+    for(int i = 0; i < device_count; i++)
     {
-        tlcmanager[0].pwm(arr[i], val);
-        tlcmanager[1].pwm(arr[i], val);
-        tlcmanager[2].pwm(arr[i], val);
-        tlcmanager[3].pwm(arr[i], val);
+        for(int j = 0; j < count ; j++)
+        {
+            ledBuffer[0][arr[j]] = val;
+          /*
+            tlcmanager[0].pwm(arr[i], val);
+            tlcmanager[1].pwm(arr[i], val);
+            tlcmanager[2].pwm(arr[i], val);
+            tlcmanager[3].pwm(arr[i], val);
+            */
+        }
     }
 }
 
