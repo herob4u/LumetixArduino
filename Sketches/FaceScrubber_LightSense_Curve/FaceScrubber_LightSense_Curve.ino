@@ -27,10 +27,22 @@ static const float buffer = 0.2;
 static const float maxWarm = 5.0;
 static const float maxCool = 0.0;
 
+static const float maxRb = 5.0;
+static const float neutralRb = 2.4;
+static const float minRb = 1.0;
+static const float bufferRb = buffer;
+
+static const float maxGb = 3.8;
+static const float neutralGb = 2.1;
+static const float bufferGb = buffer;
+
 static float _min = 2;
 static float _max = 4.2;
 static float RBf = _min;
 static float Rf = 1;
+
+bool warmMode = false;
+
 /* Variable Responses */
 static VariableResponse W_LedResponse(RBf, _min, _max);
 static VariableResponse Y_LedResponse(RBf, _min, _max);
@@ -97,67 +109,8 @@ void setup()
 
 void loop() 
 {   
-    // Important: Must be EQUAL to packet size. Failure to do so introduces oddities in the transmission
-    // That makes us respond at later steps - confuses the hell out of UI.
-
-    if(Serial.available() > 0)
-    {
-        // Read special character for pause
-        byte input = Serial.read();
-        if(input == 'p')
-        {
-            bIsPaused = !bIsPaused;
-        } else {
-        switch(input)
-        {
-          case '1':
-            RBf = ((_max - _min)* 0.1 + _min);
-          break;
-
-          case '2':
-            RBf = ((_max - _min)* 0.2 + _min);
-          break;
-
-          case '3':
-            RBf = ((_max - _min)* 0.3 + _min);
-          break;
-
-          case '4':
-            RBf = ((_max - _min)* 0.4 + _min);
-          break;
-
-          case '5':
-            RBf = ((_max - _min)* 0.5 + _min);
-          break;
-
-          case '6':
-            RBf = ((_max - _min)* 0.6 + _min);
-          break;
-
-          case '7':
-            RBf = ((_max - _min)* 0.7 + _min);
-          break;
-
-          case '8':
-            RBf = ((_max - _min)* 0.8 + _min);
-          break;
-
-          case '9':
-            RBf = ((_max - _min)* 0.9 + _min);
-          break;
-
-          case '0':
-            RBf = ((_max - _min)* 1 + _min);
-          break;
-        }
-        }
-    }
-
-    if(bIsPaused)
-    {
-        Serial.println("PAUSED");
-        return; 
-    }
+  // Important: Must be EQUAL to packet size. Failure to do so introduces oddities in the transmission
+  // That makes us respond at later steps - confuses the hell out of UI.
     
   // Read sensor values (16 bit integers)
   float red = RGB_sensor.readRed();
@@ -187,27 +140,54 @@ void loop()
   Serial.print("Rf/Bf: "); Serial.println(RBf);
 //  //Serial.print("Gf/Bf: "); Serial.println(GBf);
 
-  //float delta = tempDelta(RBf);
-  float W_response = W_LedResponse.GetValue();
-  float Y_response = Y_LedResponse.GetValue();
-  float R_response = R_LedResponse.GetValue();
+  if (warmMode == true) {
+    //float delta = tempDelta(RBf);
+    float W_response = W_LedResponse.GetValue();
+    float Y_response = Y_LedResponse.GetValue();
+    float R_response = R_LedResponse.GetValue();
+    
+    Serial.print("Parameter t = "); Serial.println(W_LedResponse.DebugGetParameter());
+    Serial.print("Response Value = "); Serial.println(W_response);
+  //
+  //  Serial.print("Parameter t2 = "); Serial.println(Y_LedResponse.DebugGetParameter());
+  //  Serial.print("Response Value2 = "); Serial.println(Y_response);
   
-  Serial.print("Parameter t = "); Serial.println(W_LedResponse.DebugGetParameter());
-  Serial.print("Response Value = "); Serial.println(W_response);
-//
-//  Serial.print("Parameter t2 = "); Serial.println(Y_LedResponse.DebugGetParameter());
-//  Serial.print("Response Value2 = "); Serial.println(Y_response);
-
-  //Serial.print("Parameter t_red = "); Serial.println(R_LedResponse.DebugGetParameter());
-
-  ledPanel->SetBrightness(ELedColor::WHITE, W_response*255);
-  ledPanel->SetBrightness(ELedColor::YELLOW, Y_response*255, EUpdateMode::IGNORE_UNSELECTED);
-  ledPanel->SetTransitionSpeed(0.4);
-  //ledPanel.SetBrightness(ELedColor::RED, R_response);
-
-  //Light(white_channels, sizeof(white_channels), W_response);
-  //Light(yellow_channels, sizeof(yellow_channels), Y_response);
-  //Light(red_channels, sizeof(red_channels), R_response);
+    //Serial.print("Parameter t_red = "); Serial.println(R_LedResponse.DebugGetParameter());
+  
+    ledPanel->SetBrightness(ELedColor::WHITE, W_response*255);
+    ledPanel->SetBrightness(ELedColor::YELLOW, Y_response*255, EUpdateMode::IGNORE_UNSELECTED);
+  
+    ledPanel->SetTransitionSpeed(0.4);
+    //ledPanel.SetBrightness(ELedColor::RED, R_response);
+  
+    //Light(white_channels, sizeof(white_channels), W_response);
+    //Light(yellow_channels, sizeof(yellow_channels), Y_response);
+    //Light(red_channels, sizeof(red_channels), R_response);
+  
+  } else {
+    float redDelta = rbDelta(RBf);
+    float greenDelta = gbDelta(GBf);
+    
+    if(redDelta > 0)
+    {
+      ledPanel->SetBrightness(ELedColor::RED, 0);
+      ledPanel->SetBrightness(ELedColor::BLUE, redDelta*255);
+      ledPanel->SetBrightness(ELedColor::GREEN, redDelta*255);
+    } else if (redDelta < 0) {
+      redDelta = -redDelta;
+      ledPanel->SetBrightness(ELedColor::RED, redDelta*255);
+      ledPanel->SetBrightness(ELedColor::BLUE, 0);
+      ledPanel->SetBrightness(ELedColor::GREEN, redDelta*255);
+    } else if (greenDelta > 0) {
+      ledPanel->SetBrightness(ELedColor::RED, greenDelta*255);
+      ledPanel->SetBrightness(ELedColor::BLUE, greenDelta*255);
+      ledPanel->SetBrightness(ELedColor::GREEN, 0);
+    } else {
+      ledPanel->SetBrightness(ELedColor::RED, 0);
+      ledPanel->SetBrightness(ELedColor::BLUE, 0);
+      ledPanel->SetBrightness(ELedColor::GREEN, 0);
+    }
+  }
 
   float deltaTime = (millis()/1000.f) - g_CurrTime;
   g_CurrTime = (millis()/1000.f);
@@ -215,6 +195,7 @@ void loop()
   ledPanel->Update(deltaTime);
 
   Serial.println();
+  
   delay(5);
 }
 
@@ -280,6 +261,30 @@ float tempDelta(float ratio)
 
     return 0;
 }
+
+float rbDelta(float ratio) {
+
+    if(ratio < neutralRb - bufferRb) {
+      float bufferBoundary = neutralRb - bufferRb;
+      return (float)(ratio - bufferBoundary)/(abs(maxRb - bufferBoundary));
+    }
+    else if (ratio > neutralRb + bufferRb) {
+      float bufferBoundary = neutralRb + bufferRb;
+      return (float)(ratio - bufferBoundary)/(abs(minRb - bufferBoundary));
+    }
+
+    return 0;
+}
+
+float gbDelta(float ratio) {
+  if (ratio > neutralGb + bufferGb) {
+    float bufferBoundary = neutralGb - bufferGb;
+    return (float)(ratio - bufferBoundary)/(abs(maxGb - bufferBoundary));
+  }
+
+  return 0;
+}
+
 
 void clearLedBuffer()
 {
