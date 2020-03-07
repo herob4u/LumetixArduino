@@ -22,7 +22,7 @@ public:
     /* Returns the response to the currently monitored variable based on interpolation on a curve */
     float GetValue() const;
     
-    float DebugGetParameter() { return (m_MonitorVar - m_MinVal)/(m_MaxVal - m_MinVal); }
+    float DebugGetParameter();
 private:
     Curve m_Curve;
 

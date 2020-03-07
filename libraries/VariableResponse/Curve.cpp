@@ -162,6 +162,7 @@ void Curve::RemoveKey(int atIdx)
 
 float Curve::Evaluate(float t, bool linear) const
 {
+  linear = true;
     int begin = 0;
     int end = 0;
 

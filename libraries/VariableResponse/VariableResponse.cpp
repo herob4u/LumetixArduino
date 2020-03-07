@@ -29,6 +29,14 @@ void VariableResponse::ResetRange(float newMin, float newMax)
 float VariableResponse::GetValue() const
 {
     const float clampedVar = Clamp(m_MonitorVar, m_MinVal, m_MaxVal);
-    const float t = (clampedVar - m_MinVal)/(m_MaxVal - m_MinVal);
+    float t = (clampedVar - m_MinVal)/(m_MaxVal - m_MinVal);
+  if (t == 1) t -= 0.1;
     return m_Curve.Evaluate(t);
+}
+
+float VariableResponse::DebugGetParameter() {
+  const float clampedVar = Clamp(m_MonitorVar, m_MinVal, m_MaxVal);
+  float t = (clampedVar - m_MinVal)/(m_MaxVal - m_MinVal);
+  if (t == 1) t -= 0.1;
+  return t;
 }
