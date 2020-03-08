@@ -3,9 +3,11 @@
 
 #include <stdint.h>
 #include <Arduino.h>
+
+#include "Common.h"
+
 #include "../TLC59116/TLC59116.h"
 
-#define NUM_CHANNELS 16
 enum EPanel : uint8_t
 {
     TOP = 0,
@@ -23,6 +25,7 @@ enum ELedColor : uint8_t
     GREEN   = (1 << 4),
     BLUE    = (1 << 5)
 };
+ENUM_BITFLAG(ELedColor);
 
 enum class EUpdateMode : uint8_t
 {
@@ -34,20 +37,45 @@ enum class EUpdateMode : uint8_t
     IGNORE_NONZERO
 };
 
+
 class LedPanel
 {
 public:
     LedPanel(TLC59116Manager& tlcmanager);
 
+    #include "PanelIterators.inl"
+    VerticalPanelIterator VerticalIterator() const { return VerticalPanelIterator(*const_cast<LedPanel*>(this)); }
+    RingPanelIterator RingIterator() const { return RingPanelIterator(*const_cast<LedPanel*>(this)); }
+    
     void Update(float deltaTime);
     void SetTransitionSpeed(float scalar);
 
+    /* Set the brightness of LEDs of a specified color across all panels */
     void SetBrightness(ELedColor color, byte brightness, EUpdateMode updateMode = EUpdateMode::IGNORE_UNSELECTED);
+
+    /* Set the brightness of LEDs of a specified color for a given panel */
     void SetBrightness(EPanel panel, ELedColor color, byte brightness, EUpdateMode updateMode = EUpdateMode::IGNORE_UNSELECTED);
+
+    /* Set the brightness for all LEDs on a given panel*/
     void SetBrightness(EPanel panel, byte brightness, EUpdateMode updateMode = EUpdateMode::IGNORE_UNSELECTED);
+
+    /* Set the brightness of all LEDs on the board */
     void SetBrightness(byte brightness, EUpdateMode updateMode = EUpdateMode::IGNORE_UNSELECTED);
 
+    /* Set brightness for LEDs in a given pin map. A pin map is a direct indicator of selected pinouts
+    *   on a per panel basis. If the pin is set to 1, the corresponding LED is updated with brightness.
+    */
+    void FromChannelMap(int* channelMaps, byte brightness, EUpdateMode updateMode = EUpdateMode::IGNORE_UNSELECTED);
+    void FromChannelMap(unsigned short top, unsigned short right, unsigned short bottom, unsigned short left, byte brightness, EUpdateMode updateMode = EUpdateMode::IGNORE_UNSELECTED);
+
+    /*  Manual mode for selectively setting brightness of individual channels 
+    *   Intakes an array of channels corresponding to the channels to be set,
+    *   and the channel count in the array.
+    */
+    void SetChannelBrightness(EPanel panel, byte brightness, int* channels, size_t count);
+
     void TurnOff(bool bImmediate = false);
+    void TurnOn(bool bImmediate = false);
 private:
     byte BlendBrightness(byte prevVal, byte newVal, EUpdateMode updateMode) const;
     void UpdateLedBuffer(float deltaTime);
@@ -57,8 +85,8 @@ private:
     /*  The LedBuffer represents the target values of intensities for all LEDs
     *   Conversely, the Current buffer represents the current values being interpolated.
     */
-    byte m_LedBuffer[EPanel::MAX_VAL][16];
-    byte m_CurrLedBuffer[EPanel::MAX_VAL][16];
+    byte m_LedBuffer[EPanel::MAX_VAL][NUM_CHANNELS];
+    byte m_CurrLedBuffer[EPanel::MAX_VAL][NUM_CHANNELS];
 
     float m_TransitionSpeed;
 
