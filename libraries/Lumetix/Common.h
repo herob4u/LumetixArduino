@@ -7,6 +7,7 @@
 #define CLEAR_BIT (x, n) ((x)&= ~(1 << n))
 #define GET_BIT(x, n) ((x) & (1 << n))
 #define LED_MASK(n) ( 1 << n )
+#define LED_MASK_REVERSE(n) ( n << 15)
 #define LED_MASK_ALL ( 0xFFFF)
 
 /* Physical Mapping for our virtual panel where entries are LED pinouts from left to right */
@@ -28,8 +29,24 @@ enum class EGradientDirection : short
     VERTICAL
 };
 
-static float Lerp(float A, float B, float alpha)
+static inline float Lerp(float A, float B, float alpha)
 {
     return (1-alpha)*A + alpha*B;
 }
+
+static inline float Clamp(float val, float min, float max)
+{
+    return val < min ? min : val > max ? max : val;
+}
+
+/* Comment out for "release".*/
+//#define DEBUG_MODE
+#ifdef DEBUG_MODE
+    #define LOG(x) Serial.print(x)
+    #define LOGN(x) Serial.println(x)
+#else
+    #define LOG(x)
+    #define LOGN(x)
+#endif // DEBUG_MODE
+
 #endif // !COMMON_H
