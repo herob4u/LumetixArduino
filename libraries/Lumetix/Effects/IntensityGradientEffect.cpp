@@ -18,25 +18,47 @@ void IntensityGradientEffect::OnApplied()
     // Perform the gradient by spatially iterating over the panel and setting values
     if(m_Dir == EGradientDirection::HORIZONTAL)
     {
-
+        ApplyHorizontalGradient();
     }
     else
     {   
-        auto it = panel.VerticalIterator();
+        ApplyVerticalGradient();
+    }
+}
 
-        for(int i = 0; i < NUM_CHANNELS; i++)
-        {
-            if(it)
-            {
-                const float alpha = (float)i / (NUM_CHANNELS - 1);
+void IntensityGradientEffect::ApplyVerticalGradient()
+{
+    LedPanel& panel = gContext->Panel;
 
-                byte val = Lerp((float)m_IntensityA, (float)m_IntensityB, alpha);
+    /* Get a vertical iterator over the panel */
+    auto it = panel.VerticalIterator();
 
-                // Additively apply brightness without affecting previous set values.
-                it.SetBrightness(val, EUpdateMode::IGNORE_NONZERO);
-            }
-            ++it;
-        }
+    while(it)
+    {
+        const float alpha = (float)i / (NUM_CHANNELS-1);
+        byte brightness = Lerp((float)m_IntensityA, (float)m_IntensityB, alpha);
+
+        // Ignore Nonzero incorporates persistence - previously set LEDs remain set.
+        it.SetBrightness(brightness, EUpdateMode::IGNORE_NONZERO);
+        ++it;
+    }
+}
+
+void IntensityGradientEffect::ApplyHorizontalGradient()
+{
+    LedPanel& panel = gContext->Panel;
+
+    /* Get a horizontal iterator over the panel */
+    auto it = panel.HorizontalIterator();
+
+    while(it)
+    {
+        const float alpha = (float)i / (NUM_CHANNELS - 1);
+        byte brightness = Lerp((float)m_IntensityA, (float)m_IntensityB, alpha);
+
+        // Ignore Nonzero incorporates persistence - previously set LEDs remain set.
+        it.SetBrightness(brightness, EUpdateMode::IGNORE_NONZERO);
+        ++it;
     }
 }
 

@@ -13,6 +13,9 @@ public:
     virtual void OnRemoved() override;
 
 private:
+    void ApplyVerticalGradient();
+    void ApplyHorizontalGradient();
+private:
     EGradientDirection m_Dir;
     byte m_IntensityA;
     byte m_IntensityB;

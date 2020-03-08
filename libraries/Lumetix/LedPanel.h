@@ -44,8 +44,9 @@ public:
     LedPanel(TLC59116Manager& tlcmanager);
 
     #include "PanelIterators.inl"
-    VerticalPanelIterator VerticalIterator() const { return VerticalPanelIterator(*const_cast<LedPanel*>(this)); }
-    RingPanelIterator RingIterator() const { return RingPanelIterator(*const_cast<LedPanel*>(this)); }
+    VerticalPanelIterator VerticalIterator(size_t maskSize = 1) const       { return VerticalPanelIterator(*const_cast<LedPanel*>(this), maskSize); }
+    HorizontalPanelIterator HorizontalIterator(size_t maskSize = 1) const   { return HorizontalPanelIterator(*const_cast<LedPanel*>(this), maskSize); }
+    RingPanelIterator RingIterator(size_t maskSize = 1) const               { return RingPanelIterator(*const_cast<LedPanel*>(this), maskSize); }
     
     void Update(float deltaTime);
     void SetTransitionSpeed(float scalar);
@@ -62,11 +63,16 @@ public:
     /* Set the brightness of all LEDs on the board */
     void SetBrightness(byte brightness, EUpdateMode updateMode = EUpdateMode::IGNORE_UNSELECTED);
 
-    /* Set brightness for LEDs in a given pin map. A pin map is a direct indicator of selected pinouts
-    *   on a per panel basis. If the pin is set to 1, the corresponding LED is updated with brightness.
+    /*  Set brightness for LEDs in a given channel map. A channel map is a direct indicator of selected LED channels
+    *   on a per panel basis. The bit value of each channel corresponds to the toggled state of the LED - ON(1), OFF(0)
     */
     void FromChannelMap(int* channelMaps, byte brightness, EUpdateMode updateMode = EUpdateMode::IGNORE_UNSELECTED);
-    void FromChannelMap(unsigned short top, unsigned short right, unsigned short bottom, unsigned short left, byte brightness, EUpdateMode updateMode = EUpdateMode::IGNORE_UNSELECTED);
+
+    /*  Set brightness for LEDs from a given channel map, where a channel maps are bitflags representing
+    *   the toggled state of LEDs in the top, right, bottom, and left panels.
+    */
+    void FromChannelMap(unsigned short top, unsigned short right, unsigned short bottom, unsigned short left
+                        , byte brightness, EUpdateMode updateMode = EUpdateMode::IGNORE_UNSELECTED);
 
     /*  Manual mode for selectively setting brightness of individual channels 
     *   Intakes an array of channels corresponding to the channels to be set,

@@ -24,22 +24,19 @@ struct LedSelectFlags
 *   the LEDs on the panels. An iterator keeps track of the current
 *   selection of LEDs in its traversal.
 *
-*   A Mask is used to influence neighboring LEDs. The Falloff is used
-*   to govern intensity attenuation with every increment of LED from the given
-*   selection (100% for discrete intensity separation)
+*   A Mask is used to influence neighboring LEDs.
 */
 struct PanelIterator
 {
     PanelIterator(LedPanel& panel, size_t maskSize = 1)
     : Panel(panel)
     , Mask(1)
-    , Falloff(1.f)
     {
         for(int i = 0; i < maskSize; i++)
         {
             Mask |= ( 1 << i );
         }
-        Serial.print("MASK: "); Serial.println(Mask);
+        LOG("MASK: "); LOGN(Mask);
     }
 
     /* For the currently selected pins by the iterator, set their brightness to the specified value */
@@ -65,30 +62,32 @@ struct PanelIterator
 
     void DebugPrint()
     {
-        Serial.print("Top: "); Serial.println(SelectFlags[0]);
-        Serial.print("Right: "); Serial.println(SelectFlags[1]);
-        Serial.print("Bottom: "); Serial.println(SelectFlags[2]);
-        Serial.print("Left: "); Serial.println(SelectFlags[3]);
-        Serial.println("\n");
+        LOG("Top: ");       LOGN(SelectFlags[0]);
+        LOG("Right: ");     LOGN(SelectFlags[1]);
+        LOG("Bottom: ");    LOGN(SelectFlags[2]);
+        LOG("Left: ");      LOGN(SelectFlags[3]);
+        LOG("\n");
     }
 protected:
     size_t StepCount;
     unsigned short SelectFlags[EPanel::MAX_VAL];
     unsigned short Mask;     // Masking operation that allows selecting neighboring LEDs from a given selection
-    float Falloff; // Percent falloff of intensity with every LED step;
     LedPanel& Panel;
 };
 
 /*  The vertical iterator holds a reference to LEDs that form a 
 *   a row across the panel. By that definition, the first and end
 *   iterations will address 16 LEDs, whereas in-betweens have 2.
+*
+*   In our configuration, the left and right panels are physically MIRRORED.
+*   As a result, the left and right panels iterate in reverse
 */
 struct VerticalPanelIterator : public PanelIterator
 {
     VerticalPanelIterator(LedPanel& panel, size_t maskSize = 1)
         : PanelIterator(panel, maskSize)
     {
-        Serial.println("CONSTRUCTED");
+        LOGN("Vertical It");
         Serial.flush();
         StepCount = 0;
 
@@ -111,7 +110,7 @@ struct VerticalPanelIterator : public PanelIterator
         else
         {
             SelectFlags[EPanel::TOP] = 0;
-            SelectFlags[EPanel::RIGHT] = (Mask << StepCount);
+            SelectFlags[EPanel::RIGHT] = (LED_MASK_REVERSE(Mask) >> StepCount); //(Mask << StepCount);
             SelectFlags[EPanel::BOTTOM] = 0;
             SelectFlags[EPanel::LEFT] = (Mask << StepCount);
         }
@@ -124,9 +123,17 @@ struct VerticalPanelIterator : public PanelIterator
         // Last step. top panel fully active.
         if(StepCount == 1)
         {
+            SelectFlags[EPanel::TOP] = LED_MASK_ALL;
+            SelectFlags[EPanel::RIGHT] = 0;
+            SelectFlags[EPanel::BOTTOM] = 0;
+            SelectFlags[EPanel::LEFT] = 0;
         }
         else
         {
+            SelectFlags[EPanel::TOP] = 0;
+            SelectFlags[EPanel::RIGHT] = (Mask << StepCount);
+            SelectFlags[EPanel::BOTTOM] = 0;
+            SelectFlags[EPanel::LEFT] = (LED_MASK_REVERSE(Mask) >> StepCount);
         }
 
         StepCount--;
@@ -140,9 +147,59 @@ struct VerticalPanelIterator : public PanelIterator
 
 struct HorizontalPanelIterator : public PanelIterator
 {
-    HorizontalPanelIterator(LedPanel& panel)
-        : PanelIterator(panel)
+    HorizontalPanelIterator(LedPanel& panel, size_t maskSize = 1)
+        : PanelIterator(panel, maskSize)
     {
+        LOGN("Horizontal It");
+        Serial.flush();
+        StepCount = 0;
+
+        SelectFlags[EPanel::TOP] = 0;
+        SelectFlags[EPanel::RIGHT] = 0;
+        SelectFlags[EPanel::BOTTOM] = 0;
+        SelectFlags[EPanel::LEFT] = LED_MASK_ALL;
+    }
+
+    void operator++()
+    {
+        // Last step. Right panel fully active.
+        if(StepCount == NUM_CHANNELS - 2)
+        {
+            SelectFlags[EPanel::TOP] = 0;
+            SelectFlags[EPanel::RIGHT] = LED_MASK_ALL;
+            SelectFlags[EPanel::BOTTOM] = 0;
+            SelectFlags[EPanel::LEFT] = 0;
+        }
+        else
+        {
+            SelectFlags[EPanel::TOP] = (Mask << StepCount);
+            SelectFlags[EPanel::RIGHT] = 0;
+            SelectFlags[EPanel::BOTTOM] = (LED_MASK_REVERSE(Mask) >> StepCount); // bottom is reversed?
+            SelectFlags[EPanel::LEFT] = 0;
+        }
+
+        StepCount++;
+    }
+
+    void operator--()
+    {
+        // Last step. left panel fully active.
+        if(StepCount == 1)
+        {
+            SelectFlags[EPanel::TOP] = 0;
+            SelectFlags[EPanel::RIGHT] = 0;
+            SelectFlags[EPanel::BOTTOM] = 0;
+            SelectFlags[EPanel::LEFT] = LED_MASK_ALL;
+        }
+        else
+        {
+            SelectFlags[EPanel::TOP] = (LED_MASK_REVERSE(Mask) >> StepCount);
+            SelectFlags[EPanel::RIGHT] = 0;
+            SelectFlags[EPanel::BOTTOM] = (Mask << StepCount);
+            SelectFlags[EPanel::LEFT] = 0;
+        }
+
+        StepCount--;
     }
 
     operator bool()
@@ -154,16 +211,15 @@ struct HorizontalPanelIterator : public PanelIterator
 /* Ring iterators allow for traversing the panel in a clockwise ring starting from the top panel to the left panel */
 struct RingPanelIterator : public PanelIterator
 {
-    RingPanelIterator(LedPanel& panel)
-        : PanelIterator(panel)
+    RingPanelIterator(LedPanel& panel, size_t maskSize = 1)
+        : PanelIterator(panel, maskSize)
     {
-    /*
+        /* Initially, the zero-th bit of the top panel is on. aka start from the upper left corner*/
         StepCount = 0;
-        SelectFlags[EPanel::TOP] = { LED_MASK(0) };
-        SelectFlags[EPanel::RIGHT] = { 0 };
-        SelectFlags[EPanel::BOTTOM] = { 0 };
-        SelectFlags[EPanel::LEFT] = { 0 };
-        */
+        SelectFlags[EPanel::TOP] = LED_MASK(0);
+        SelectFlags[EPanel::RIGHT] = 0 ;
+        SelectFlags[EPanel::BOTTOM] = 0 ;
+        SelectFlags[EPanel::LEFT] =  0 ;
     }
 
     void operator++()
@@ -172,38 +228,26 @@ struct RingPanelIterator : public PanelIterator
         // Right Panel: 16->31
         // Bottom Panel: 32->47
         // Left Panel: 48->63
-        /*
-        int panel = ((StepCount) / NUM_CHANNELS);
-        int channel = ((StepCount) % NUM_CHANNELS);
-        Serial.print("Step count from "); Serial.println(StepCount);
+        
+        unsigned short panel = ((++StepCount) / NUM_CHANNELS);
+        unsigned short channel = ((StepCount) % NUM_CHANNELS);
+        
+        SelectFlags[EPanel::TOP]    = panel == 0 ? (Mask << channel) : 0;
+        SelectFlags[EPanel::RIGHT]  = panel == 1 ? (LED_MASK_REVERSE(Mask) >> channel) : 0;
+        SelectFlags[EPanel::BOTTOM] = panel == 2 ? (LED_MASK_REVERSE(Mask) >> channel) : 0; // Assumes bottom is reversed, needs validation
+        SelectFlags[EPanel::LEFT]   = panel == 3 ? (Mask << channel) : 0;
 
-        SelectFlags[panel].Flags &= ~(1 << channel);
-        ++StepCount;
-
-        Serial.print("to "); Serial.println(StepCount);
-
-        panel = ((StepCount) / NUM_CHANNELS);
-        channel = ((StepCount) % NUM_CHANNELS);
-        SelectFlags[panel].Flags |= (1 << channel);
-        */
     }
 
     void operator--()
     {
-    /*
-        int panel = ((StepCount) / NUM_CHANNELS);
-        int channel = ((StepCount) % NUM_CHANNELS);
-        Serial.print("Step count from "); Serial.println(StepCount);
+        unsigned short panel = ((--StepCount) / NUM_CHANNELS);
+        unsigned short channel = ((StepCount) % NUM_CHANNELS);
 
-        SelectFlags[panel].Flags &= ~(1 << channel);
-        --StepCount;
-
-        Serial.print("to "); Serial.println(StepCount);
-
-        panel = ((StepCount) / NUM_CHANNELS);
-        channel = ((StepCount) % NUM_CHANNELS);
-        SelectFlags[panel].Flags |= (1 << channel);
-        */
+        SelectFlags[EPanel::TOP]    = panel == 0 ? (LED_MASK_REVERSE(Mask) >> channel) : 0;
+        SelectFlags[EPanel::RIGHT]  = panel == 1 ? (Mask << channel) : 0;
+        SelectFlags[EPanel::BOTTOM] = panel == 2 ? (Mask << channel) : 0; // Assumes bottom is reversed, needs validation
+        SelectFlags[EPanel::LEFT]   = panel == 3 ? (LED_MASK_REVERSE(Mask) >> channel) : 0;
     }
 
     operator bool()

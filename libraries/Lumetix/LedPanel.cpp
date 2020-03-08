@@ -16,7 +16,7 @@ LedPanel::LedPanel(TLC59116Manager& tlcmanager)
 {
     if(tlcmanager.device_count() != EPanel::MAX_VAL)
     {
-        Serial.println("TLCManager and panel mismatch. Aborting program");
+        LOGN("TLCManager and panel mismatch. Aborting program");
         Serial.flush();
         abort();
     }
@@ -35,7 +35,7 @@ LedPanel::LedPanel(TLC59116Manager& tlcmanager)
 void LedPanel::Update(float deltaTime)
 {
     UpdateLedBuffer(deltaTime);
-    Serial.println("Update");
+    LOGN("Update");
 }
 
 void LedPanel::SetTransitionSpeed(float scalar)
@@ -109,10 +109,10 @@ void LedPanel::FromChannelMap(int* channelMaps, byte brightness, EUpdateMode upd
         for(int i = 0; i < NUM_CHANNELS; i++)
         {
             int enabled = channelMaps[panel][i];
-            Serial.print("[");Serial.print(panel);Serial.print("]");
-            Serial.print("["); Serial.print(i); Serial.print("]");
-            Serial.print("=");
-            Serial.println(i);
+            LOG("[");LOG(panel);LOG("]");
+            LOG("["); LOG(i); LOG("]");
+            LOG("=");
+            LOGN(i);
             Serial.flush();
             byte currBrightness = m_LedBuffer[panel][i];
             byte newBrightness = BlendBrightness(currBrightness, brightness * enabled, updateMode);
@@ -121,7 +121,7 @@ void LedPanel::FromChannelMap(int* channelMaps, byte brightness, EUpdateMode upd
             m_CurrLedBuffer[panel][i] = newBrightness;
         }
     }
-    Serial.println("FromChannelMap update");
+    LOGN("FromChannelMap update");
     UpdateLedBuffer(1);
 #else
     for(int panel = 0; panel < 4; panel++)
@@ -129,10 +129,10 @@ void LedPanel::FromChannelMap(int* channelMaps, byte brightness, EUpdateMode upd
         for(int i = 0; i < NUM_CHANNELS; i++)
         {
             int enabled = 1;//channelMaps[i + 16*panel];
-            Serial.print("["); Serial.print(panel); Serial.print("]");
-            Serial.print("["); Serial.print(i); Serial.print("]");
-            Serial.print("=");
-            Serial.println(enabled);
+            LOG("["); LOG(panel); LOG("]");
+            LOG("["); LOG(i); LOG("]");
+            LOG("=");
+            LOGN(enabled);
             Serial.flush();
 
             byte currBrightness = m_LedBuffer[panel][i];
@@ -147,15 +147,22 @@ void LedPanel::FromChannelMap(int* channelMaps, byte brightness, EUpdateMode upd
 #endif
 }
 
+/* @TODO: Use Blend Brightness to support update modes */
 void LedPanel::FromChannelMap(unsigned short top, unsigned short right, unsigned short bottom, unsigned short left, byte brightness, EUpdateMode updateMode)
 {
     for(int channel = 0; channel < NUM_CHANNELS; channel++)
     {
-        // Effectively toggle LEDs ON or OFF using a masking operation
+        // Effectively toggle LEDs ON or OFF using a masking operation. These are the new target values
         byte topBrightness      = (((1 << channel) & top) == 0)       ? 0 : brightness;
         byte rightBrightness    = (((1 << channel) & right) == 0)     ? 0 : brightness;
         byte bottomBrightness   = (((1 << channel) & bottom) == 0)    ? 0 : brightness;
         byte leftBrightness     = (((1 << channel) & left) == 0)      ? 0 : brightness;
+
+        // Perform update mode blending based on previous and new target values
+        topBrightness       = BlendBrightness(m_LedBuffer[0][channel], topBrightness, updateMode);
+        rightBrightness     = BlendBrightness(m_LedBuffer[0][channel], rightBrightness, updateMode);
+        bottomBrightness    = BlendBrightness(m_LedBuffer[0][channel], bottomBrightness, updateMode);
+        leftBrightness      = BlendBrightness(m_LedBuffer[0][channel], leftBrightness, updateMode);
 
         // Update both the current and target buffer for immediate change
         m_LedBuffer[0][channel] = topBrightness;
@@ -163,6 +170,7 @@ void LedPanel::FromChannelMap(unsigned short top, unsigned short right, unsigned
         m_LedBuffer[2][channel] = bottomBrightness;
         m_LedBuffer[3][channel] = leftBrightness;
 
+        // @TODO: This can be removed. UpdateLedBuffer will perform this if deltaTime >= (1/transitionSpeed).
         m_CurrLedBuffer[0][channel] = topBrightness;
         m_CurrLedBuffer[1][channel] = rightBrightness;
         m_CurrLedBuffer[2][channel] = bottomBrightness;
