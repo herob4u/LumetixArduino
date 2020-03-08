@@ -1,0 +1,11 @@
+# Ignore all files
+*
+
+# Except...
+!.gitignore
+!Sketches/FaceScrubber_LightSense_Curve/*
+!libraries/Lumetix/*
+!libraries/SparkFun_ISL29125_Breakout_Arduino_Library-master/*
+!TLC59116/*
+!VariableResponse/*
+
