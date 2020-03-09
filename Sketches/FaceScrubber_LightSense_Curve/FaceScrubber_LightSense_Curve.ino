@@ -98,10 +98,15 @@ void setup()
     delay(1000);
 
     flushSerialInput();
+    Serial.print(START_BYTE);Serial.print((byte)3);
+    Serial.println(" ");
 }
 
 void loop() 
 {   
+
+  PollSerialEvents();
+  
   if (mode == 1) {
   // Important: Must be EQUAL to packet size. Failure to do so introduces oddities in the transmission
   // That makes us respond at later steps - confuses the hell out of UI.
@@ -352,25 +357,18 @@ Serial.print("Max: "); Serial.println(_max);
 
 void PollSerialEvents()
 {
-    static const int msgSize = 5; // 5 bytes expected
-    if(Serial.available() >= msgSize)
+    static const int msgSize = 2; // 2 bytes expected
+    if(Serial.available() == msgSize)
     {
         byte startByte = Serial.read();
 
         if(startByte == START_BYTE)
         {
+            delay(30);
            // Perform transmission
-           byte modeBytes[4];
-           Serial.readBytes(&modeBytes[0], sizeof(modeBytes));
+           byte modeByte = Serial.read();
 
-           uint32_t outMode = 0;
-           
-            outMode = (uint32_t) modeBytes[0] << 24;
-            outMode |=  (uint32_t) modeBytes[1] << 16;
-            outMode |= (uint32_t) modeBytes[2] << 8;
-            outMode |= (uint32_t) modeBytes[3]; 
-
-            mode = outMode;
+            mode = modeByte;
         }
         else
         {
@@ -378,6 +376,7 @@ void PollSerialEvents()
         }
     }
 
+  Serial.flush();
 }
 void Light(byte* arr, int count, float intensity)
 {
