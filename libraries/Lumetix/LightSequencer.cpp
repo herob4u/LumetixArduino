@@ -19,7 +19,7 @@ void LightSequencer::Hello()
         {
             ringIt.SetBrightness(brightness);
             ++ringIt;
-            delay(25);
+            delay(55);
         }
     }
 
@@ -68,10 +68,10 @@ void LightSequencer::FadeRing()
     byte incr = 4;
     while(ringIt)
     {
-        ringIt.SetBrightness(incr);
+        ringIt.SetBrightness(128);
         ++ringIt;
         incr += incr;
-        delay(25);
+        delay(35);
     }
 }
 

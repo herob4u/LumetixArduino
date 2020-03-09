@@ -14,13 +14,6 @@ LedPanel::LedPanel(TLC59116Manager& tlcmanager)
     : m_TransitionSpeed(1.f)
     , m_TlcManager(tlcmanager)
 {
-    if(tlcmanager.device_count() != EPanel::MAX_VAL)
-    {
-        LOGN("TLCManager and panel mismatch. Aborting program");
-        Serial.flush();
-        abort();
-    }
-
     /* Zero out the buffers */
     for(int panel = 0; panel < EPanel::MAX_VAL; panel++)
     {
@@ -29,6 +22,16 @@ LedPanel::LedPanel(TLC59116Manager& tlcmanager)
             m_LedBuffer[panel][i] = 0;
             m_CurrLedBuffer[panel][i] = 0;
         }
+    }
+}
+
+void LedPanel::Init()
+{
+    if(m_TlcManager.device_count() != EPanel::MAX_VAL)
+    {
+        LOGN("TLCManager and panel mismatch. Aborting program");
+        Serial.flush();
+        abort();
     }
 }
 

@@ -11,11 +11,22 @@
 #define LED_MASK_ALL ( 0xFFFF)
 
 /* Physical Mapping for our virtual panel where entries are LED pinouts from left to right */
+#define ALTERNATE_MAPPING
+#ifdef ALTERNATE_MAPPING
 static unsigned int PhysicalMapping[16]
 {
     7,6,5,4,3,2,1,0,
     15,14,13,12,11,10,9,8
 };
+#else
+static unsigned int PhysicalMapping[16]
+{
+    7,6,5,4,3,2,1,0,
+    15,14,13,12,11,10,9,8
+};
+#endif // ALTERNATE_CHANNEL
+
+
 
 #define ENUM_BITFLAG(enumClass) \
 inline enumClass operator |(const enumClass& A, const enumClass& B) { return static_cast<enumClass>(static_cast<short>(A) | static_cast<short>(B)); }  \
@@ -40,7 +51,7 @@ static inline float Clamp(float val, float min, float max)
 }
 
 /* Comment out for "release".*/
-//#define DEBUG_MODE
+#define DEBUG_MODE
 #ifdef DEBUG_MODE
     #define LOG(x) Serial.print(x)
     #define LOGN(x) Serial.println(x)

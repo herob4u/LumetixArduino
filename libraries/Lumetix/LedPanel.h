@@ -42,6 +42,7 @@ class LedPanel
 {
 public:
     LedPanel(TLC59116Manager& tlcmanager);
+    void Init();
 
     #include "PanelIterators.inl"
     VerticalPanelIterator VerticalIterator(size_t maskSize = 1) const       { return VerticalPanelIterator(*const_cast<LedPanel*>(this), maskSize); }
