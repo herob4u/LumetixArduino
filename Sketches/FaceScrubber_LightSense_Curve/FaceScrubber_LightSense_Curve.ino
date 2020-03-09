@@ -350,6 +350,35 @@ Serial.print("Max: "); Serial.println(_max);
   
 }
 
+void PollSerialEvents()
+{
+    static const int msgSize = 5; // 5 bytes expected
+    if(Serial.available() >= msgSize)
+    {
+        byte startByte = Serial.read();
+
+        if(startByte == START_BYTE)
+        {
+           // Perform transmission
+           byte modeBytes[4];
+           Serial.readBytes(&modeBytes[0], sizeof(modeBytes));
+
+           uint32_t outMode = 0;
+           
+            outMode = (uint32_t) modeBytes[0] << 24;
+            outMode |=  (uint32_t) modeBytes[1] << 16;
+            outMode |= (uint32_t) modeBytes[2] << 8;
+            outMode |= (uint32_t) modeBytes[3]; 
+
+            mode = outMode;
+        }
+        else
+        {
+            flushSerialInput();
+        }
+    }
+
+}
 void Light(byte* arr, int count, float intensity)
 {
     byte val = 255 * intensity;
