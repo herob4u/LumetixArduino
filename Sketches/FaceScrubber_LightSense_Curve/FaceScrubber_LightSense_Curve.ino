@@ -21,11 +21,13 @@
 #define LEFT_PANEL_MASK     0x3
 
 
-static const float red_intensity_multiplier = 0.3;
+static const float red_intensity_multiplier = 0.2;
 static const float blue_intensity_multiplier = 0.3;
 
 static float _min = 0;
-static float _max = 2.0;
+static float RedMin = 266;
+static float RedMax = -1;
+static float _max = 3.6;
 static float RBf = _min;
 static float Rf = 1;
 
@@ -36,6 +38,9 @@ static VariableResponse W_LedResponse(RBf, _min, _max);
 static VariableResponse Y_LedResponse(RBf, _min, _max);
 static VariableResponse R_LedResponse(Rf, 0, .5);
 static int bIsPaused = 0;
+static int presetIntensity = 150;
+static int mode = 14; // 0 is default color temp correction
+
 
 // Declare sensor object
 SFE_ISL29125 RGB_sensor;
@@ -90,15 +95,17 @@ void setup()
     // Zero out all LED values (physical board inits to zero as well)
     clearLedBuffer();
 
-    delay(25);
+    delay(1000);
 
     flushSerialInput();
 }
 
 void loop() 
 {   
+  if (mode == 1) {
   // Important: Must be EQUAL to packet size. Failure to do so introduces oddities in the transmission
   // That makes us respond at later steps - confuses the hell out of UI.
+Serial.print("Max: "); Serial.println(_max);
     
   // Read sensor values (16 bit integers)
   float red = RGB_sensor.readRed();
@@ -131,10 +138,11 @@ void loop()
   //float delta = tempDelta(RBf);
   float W_response = W_LedResponse.GetValue();
   float Y_response = Y_LedResponse.GetValue();
-  float R_response = R_LedResponse.GetValue();
   
   Serial.print("Parameter t = "); Serial.println(W_LedResponse.DebugGetParameter());
-  Serial.print("Response Value = "); Serial.println(W_response);
+  Serial.print("Cool Response Value = "); Serial.println(W_response);
+  Serial.print("Warm Response Value = "); Serial.println(Y_response);
+
 //
 //  Serial.print("Parameter t2 = "); Serial.println(Y_LedResponse.DebugGetParameter());
 //  Serial.print("Response Value2 = "); Serial.println(Y_response);
@@ -144,15 +152,26 @@ void loop()
   W_response *= blue_intensity_multiplier;
   Y_response *= red_intensity_multiplier;
   float Yellow_Resp = max(W_response, Y_response);
-   float B_response = max(W_response, Y_response);
-   float G_response = max(W_response, Y_response);
- 
+  float R_response = Y_response;
+  if (R_response < RedMin) {
+    RedMin = R_response;
+  }
+
+  if (R_response > RedMax) {
+    RedMax = R_response;
+  }
+
+    Serial.print("Red Response Max = "); Serial.println(RedMax);
+  Serial.print("Red Response Min = "); Serial.println(RedMin);
   
-  ledPanel->SetBrightness(ELedColor::WHITE, W_response*255);
-  ledPanel->SetBrightness(ELedColor::YELLOW, Yellow_Resp*255, EUpdateMode::IGNORE_UNSELECTED);
-  ledPanel->SetBrightness(ELedColor::RED, Y_response*255);
-  ledPanel->SetBrightness(ELedColor::GREEN, G_response*255);
-  ledPanel->SetBrightness(ELedColor::BLUE, B_response*255);
+  float B_response = max(W_response, Y_response);
+  float G_response = max(W_response, Y_response);
+ 
+  ledPanel->SetBrightness(ELedColor::WHITE, ceil(W_response*255));
+  ledPanel->SetBrightness(ELedColor::YELLOW, ceil(Yellow_Resp*255), EUpdateMode::IGNORE_UNSELECTED);
+  ledPanel->SetBrightness(ELedColor::RED, ceil(R_response*255));
+  ledPanel->SetBrightness(ELedColor::GREEN, ceil(G_response*255));
+  ledPanel->SetBrightness(ELedColor::BLUE, ceil(B_response*255));
 
   ledPanel->SetTransitionSpeed(0.4);
   //ledPanel.SetBrightness(ELedColor::RED, R_response);
@@ -161,7 +180,166 @@ void loop()
   //Light(yellow_channels, sizeof(yellow_channels), Y_response);
   //Light(red_channels, sizeof(red_channels), R_response);
 
-  float deltaTime = (millis()/1000.f) - g_CurrTime;
+  }
+
+  else if (mode == 2) {
+    ledPanel->SetBrightness(ELedColor::WHITE, 0);
+    ledPanel->SetBrightness(ELedColor::YELLOW, 0);
+    ledPanel->SetBrightness(ELedColor::RED, 0);
+    ledPanel->SetBrightness(ELedColor::GREEN, 0);
+    ledPanel->SetBrightness(ELedColor::BLUE, presetIntensity);
+      ledPanel->SetTransitionSpeed(0.4);
+  } else if (mode == 3) {
+    ledPanel->SetBrightness(ELedColor::WHITE, 0);
+    ledPanel->SetBrightness(ELedColor::YELLOW, presetIntensity);
+    ledPanel->SetBrightness(ELedColor::RED, 0);
+    ledPanel->SetBrightness(ELedColor::GREEN, 0);
+    ledPanel->SetBrightness(ELedColor::BLUE, 0);
+      ledPanel->SetTransitionSpeed(0.4);
+
+  } else if (mode == 4) {
+    ledPanel->SetBrightness(ELedColor::WHITE, 0);
+    ledPanel->SetBrightness(ELedColor::YELLOW, 0);
+    ledPanel->SetBrightness(ELedColor::RED, presetIntensity);
+    ledPanel->SetBrightness(ELedColor::GREEN, 0);
+    ledPanel->SetBrightness(ELedColor::BLUE, 0);
+      ledPanel->SetTransitionSpeed(0.4);
+
+  } else if (mode == 5) {
+    ledPanel->SetBrightness(ELedColor::WHITE, 0);
+    ledPanel->SetBrightness(ELedColor::YELLOW, 0);
+    ledPanel->SetBrightness(ELedColor::RED, 0);
+    ledPanel->SetBrightness(ELedColor::GREEN, presetIntensity);
+    ledPanel->SetBrightness(ELedColor::BLUE, 0);
+      ledPanel->SetTransitionSpeed(0.4);
+
+  } else if (mode == 6) {
+    ledPanel->SetBrightness(ELedColor::WHITE, 0);
+    ledPanel->SetBrightness(ELedColor::YELLOW, presetIntensity);
+    ledPanel->SetBrightness(ELedColor::RED, presetIntensity);
+    ledPanel->SetBrightness(ELedColor::GREEN, 0);
+    ledPanel->SetBrightness(ELedColor::BLUE, 0);
+      ledPanel->SetTransitionSpeed(0.4);
+
+  } else if (mode == 7) {
+    ledPanel->SetBrightness(ELedColor::WHITE, 0);
+    ledPanel->SetBrightness(ELedColor::YELLOW, 0);
+    ledPanel->SetBrightness(ELedColor::RED, 0);
+    ledPanel->SetBrightness(ELedColor::GREEN, presetIntensity);
+    ledPanel->SetBrightness(ELedColor::BLUE, presetIntensity);
+      ledPanel->SetTransitionSpeed(0.4);
+
+  } else if (mode == 8) {
+       ledPanel->SetBrightness(ELedColor::WHITE, 0);
+    ledPanel->SetBrightness(ELedColor::YELLOW, 0);
+    ledPanel->SetBrightness(ELedColor::RED, presetIntensity);
+    ledPanel->SetBrightness(ELedColor::GREEN, 0);
+    ledPanel->SetBrightness(ELedColor::BLUE, presetIntensity);
+      ledPanel->SetTransitionSpeed(0.4);
+
+  }  else if (mode == 9) {
+    ledPanel->SetBrightness(ELedColor::WHITE, 0);
+    ledPanel->SetBrightness(ELedColor::YELLOW, 0);
+    ledPanel->SetBrightness(ELedColor::RED, 0);
+    ledPanel->SetBrightness(ELedColor::GREEN, presetIntensity);
+    ledPanel->SetBrightness(ELedColor::BLUE, presetIntensity);
+      ledPanel->SetTransitionSpeed(0.4);
+
+  }  else if (mode == 10) {
+//    ledPanel->SetBrightness(ELedColor::WHITE, 0);
+//    ledPanel->SetBrightness(ELedColor::YELLOW, 0);
+//    ledPanel->SetBrightness(ELedColor::GREEN, 0);
+
+    int left[2] = {4, 11};
+    int right[2] = {3, 12};
+    int top[2] = {3, 11};
+    int bottom[2] = {4, 12};
+    
+    ledPanel->SetChannelBrightness(EPanel::TOP, presetIntensity, top, 2);
+    ledPanel->SetChannelBrightness(EPanel::LEFT, presetIntensity, left, 2);
+    ledPanel->SetChannelBrightness(EPanel::RIGHT, presetIntensity, right, 2);
+    ledPanel->SetChannelBrightness(EPanel::BOTTOM, presetIntensity, bottom, 2);
+  } else if (mode == 11) {
+
+    int left[2] = {3, 12};
+    int right[2] = {5, 10};
+    int top[2] = {5, 12};
+    int bottom[2] = {3, 10};
+    
+    ledPanel->SetChannelBrightness(EPanel::TOP, presetIntensity, top, 2);
+    ledPanel->SetChannelBrightness(EPanel::LEFT, presetIntensity, left, 2);
+    ledPanel->SetChannelBrightness(EPanel::RIGHT, presetIntensity, right, 2);
+    ledPanel->SetChannelBrightness(EPanel::BOTTOM, presetIntensity, bottom, 2);
+  } else if (mode == 12) {
+
+    int left[2] = {4, 11};
+    int right[2] = {5, 10};
+    int top[2] = {5, 11};
+    int bottom[2] = {4, 10};
+    
+    ledPanel->SetChannelBrightness(EPanel::TOP, presetIntensity, top, 2);
+    ledPanel->SetChannelBrightness(EPanel::LEFT, presetIntensity, left, 2);
+    ledPanel->SetChannelBrightness(EPanel::RIGHT, presetIntensity, right, 2);
+    ledPanel->SetChannelBrightness(EPanel::BOTTOM, presetIntensity, bottom, 2);
+  } else if (mode == 13) {
+//    ledPanel->SetBrightness(ELedColor::WHITE, 0);
+//    ledPanel->SetBrightness(ELedColor::YELLOW, 0);
+//    ledPanel->SetBrightness(ELedColor::GREEN, 0);
+
+    int left[2] = {6, 13};
+    int right[2] = {3, 12};
+    int top[2] = {3, 13};
+    int bottom[2] = {2, 12};
+    
+    ledPanel->SetChannelBrightness(EPanel::TOP, presetIntensity, top, 2);
+    ledPanel->SetChannelBrightness(EPanel::LEFT, presetIntensity, left, 2);
+    ledPanel->SetChannelBrightness(EPanel::RIGHT, presetIntensity, right, 2);
+    ledPanel->SetChannelBrightness(EPanel::BOTTOM, presetIntensity, bottom, 2);
+  } else if (mode == 14) {
+//    ledPanel->SetBrightness(ELedColor::WHITE, 0);
+//    ledPanel->SetBrightness(ELedColor::YELLOW, 0);
+//    ledPanel->SetBrightness(ELedColor::GREEN, 0);
+
+    int left[2] = {6};
+    int right[1] = {9};
+    int top[4] = {2, 3, 12, 13};
+    int bottom[2] = {5, 10};
+    
+    ledPanel->SetChannelBrightness(EPanel::TOP, presetIntensity, top, 4);
+    ledPanel->SetChannelBrightness(EPanel::LEFT, presetIntensity, left, 1);
+    ledPanel->SetChannelBrightness(EPanel::RIGHT, presetIntensity, right, 1);
+    ledPanel->SetChannelBrightness(EPanel::BOTTOM, presetIntensity, bottom, 2);
+  } else if (mode == 0) {
+        float RBfAvg = 0;
+    
+    for (int i = 0; i < 30; i ++) {
+      // Read sensor values (16 bit integers)
+      float red = RGB_sensor.readRed();
+      float green = RGB_sensor.readGreen();
+      float blue = RGB_sensor.readBlue();
+    //
+      float REDf = red /(green + blue);
+      float GREENf = green/(red + blue);
+      float BLUEf = blue/(red + green);
+    //  float RG = red/green;
+    //  float RGf = REDf/GREENf;
+    //
+      
+      RBfAvg += REDf/BLUEf;
+    }
+
+    RBfAvg /= 30.0;
+    _max = RBfAvg * 2;
+
+    W_LedResponse.ResetRange(_min, _max);
+    Y_LedResponse.ResetRange(_min, _max);
+  
+    mode = 1;
+  }
+
+  //
+
+    float deltaTime = (millis()/1000.f) - g_CurrTime;
   g_CurrTime = (millis()/1000.f);
   
   ledPanel->Update(deltaTime);
@@ -169,11 +347,7 @@ void loop()
   Serial.println();
   
   delay(5);
-}
-
-static float Lerp(float A, float B, float alpha)
-{
-    return (1-alpha)*A + alpha*B;
+  
 }
 
 void Light(byte* arr, int count, float intensity)
