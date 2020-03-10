@@ -1,11 +1,17 @@
-# Ignore all files
-*
+BACKUP/
+Sketches/
+!Sketches/FaceScrubber/
 
-# Except...
-!.gitignore
-!Sketches/FaceScrubber_LightSense_Curve/*
-!libraries/Lumetix/**
-!libraries/SparkFun_ISL29125_Breakout_Arduino_Library-master/*
-!TLC59116/*
-!VariableResponse/*
-
+libraries/EVLighting/
+libraries/EVLighting.zip
+libraries/CableBot/
+libraries/Bolder_Flight_Systems_MPU9250/
+libraries/AFMotor/
+libraries/EVMath/
+libraries/StepperDrive/
+libraries/TLC59116.zip
+libraries/TLC59116-master/
+libraries/SparkFun_ISL29125_Breakout_Arduino_Library-master.zip
+libraries/StepperDriver/
+libraries/arduino_TLC59116.zip
+libraries/readme.txt
