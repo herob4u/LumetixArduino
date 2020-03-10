@@ -10,7 +10,7 @@ void LightSequencer::Hello()
     LedPanel& panel = gContext->Panel;
 
     /* Circle around 5 times with increasing intensities */
-    for(int i = 0; i < 5; i++)
+    for(int i = 0; i < 3; i++)
     {
         auto ringIt = panel.RingIterator();
         byte brightness = (50.f*(i+1)); // Arbitrary
@@ -19,7 +19,7 @@ void LightSequencer::Hello()
         {
             ringIt.SetBrightness(brightness);
             ++ringIt;
-            delay(55);
+            delay(40);
         }
     }
 

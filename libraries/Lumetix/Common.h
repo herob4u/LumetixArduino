@@ -7,7 +7,7 @@
 #define CLEAR_BIT (x, n) ((x)&= ~(1 << n))
 #define GET_BIT(x, n) ((x) & (1 << n))
 #define LED_MASK(n) ( 1 << n )
-#define LED_MASK_REVERSE(n) ( n << 15)
+#define LED_MASK_REVERSE(x) ( x << 15)
 #define LED_MASK_ALL ( 0xFFFF)
 
 /* Physical Mapping for our virtual panel where entries are LED pinouts from left to right */

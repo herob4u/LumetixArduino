@@ -1,4 +1,5 @@
 #include <LedPanel.h>
+#include <Context.h>
 #include <VariableResponse.h>
 #include <ResponseCurves.h>
 
@@ -40,6 +41,7 @@ static VariableResponse R_LedResponse(Rf, 0, .5);
 static int bIsPaused = 0;
 static int presetIntensity = 150;
 static int mode = 14; // 0 is default color temp correction
+static int bpm = 100;
 
 
 // Declare sensor object
@@ -107,7 +109,7 @@ void loop()
 
   PollSerialEvents();
   
-  if (mode == 1) {
+  if (mode == 9) {
   // Important: Must be EQUAL to packet size. Failure to do so introduces oddities in the transmission
   // That makes us respond at later steps - confuses the hell out of UI.
 Serial.print("Max: "); Serial.println(_max);
@@ -186,7 +188,16 @@ Serial.print("Max: "); Serial.println(_max);
   //Light(red_channels, sizeof(red_channels), R_response);
 
   }
-
+  else if (mode == 1)
+  {/*
+     auto it = ledPanel->HorizontalIterator(1);
+     while(it)
+     {
+        it.SetBrightness(150);
+        ++it;
+        delay(bpm);
+     }*/
+  }
   else if (mode == 2) {
     ledPanel->SetBrightness(ELedColor::WHITE, 0);
     ledPanel->SetBrightness(ELedColor::YELLOW, 0);
@@ -239,14 +250,6 @@ Serial.print("Max: "); Serial.println(_max);
     ledPanel->SetBrightness(ELedColor::YELLOW, 0);
     ledPanel->SetBrightness(ELedColor::RED, presetIntensity);
     ledPanel->SetBrightness(ELedColor::GREEN, 0);
-    ledPanel->SetBrightness(ELedColor::BLUE, presetIntensity);
-      ledPanel->SetTransitionSpeed(0.4);
-
-  }  else if (mode == 9) {
-    ledPanel->SetBrightness(ELedColor::WHITE, 0);
-    ledPanel->SetBrightness(ELedColor::YELLOW, 0);
-    ledPanel->SetBrightness(ELedColor::RED, 0);
-    ledPanel->SetBrightness(ELedColor::GREEN, presetIntensity);
     ledPanel->SetBrightness(ELedColor::BLUE, presetIntensity);
       ledPanel->SetTransitionSpeed(0.4);
 
@@ -315,31 +318,8 @@ Serial.print("Max: "); Serial.println(_max);
     ledPanel->SetChannelBrightness(EPanel::RIGHT, presetIntensity, right, 1);
     ledPanel->SetChannelBrightness(EPanel::BOTTOM, presetIntensity, bottom, 2);
   } else if (mode == 0) {
-        float RBfAvg = 0;
     
-    for (int i = 0; i < 30; i ++) {
-      // Read sensor values (16 bit integers)
-      float red = RGB_sensor.readRed();
-      float green = RGB_sensor.readGreen();
-      float blue = RGB_sensor.readBlue();
-    //
-      float REDf = red /(green + blue);
-      float GREENf = green/(red + blue);
-      float BLUEf = blue/(red + green);
-    //  float RG = red/green;
-    //  float RGf = REDf/GREENf;
-    //
-      
-      RBfAvg += REDf/BLUEf;
-    }
-
-    RBfAvg /= 30.0;
-    _max = RBfAvg * 2;
-
-    W_LedResponse.ResetRange(_min, _max);
-    Y_LedResponse.ResetRange(_min, _max);
-  
-    mode = 1;
+    mode = 9;
   }
 
   //
@@ -355,10 +335,37 @@ Serial.print("Max: "); Serial.println(_max);
   
 }
 
+void Calibrate()
+{
+      float RBfAvg = 0;
+    
+      for (int i = 0; i < 30; i ++) {
+        // Read sensor values (16 bit integers)
+        float red = RGB_sensor.readRed();
+        float green = RGB_sensor.readGreen();
+        float blue = RGB_sensor.readBlue();
+      //
+        float REDf = red /(green + blue);
+        float GREENf = green/(red + blue);
+        float BLUEf = blue/(red + green);
+      //  float RG = red/green;
+      //  float RGf = REDf/GREENf;
+      //
+        
+        RBfAvg += REDf/BLUEf;
+      }
+  
+      RBfAvg /= 30.0;
+      _max = RBfAvg * 2;
+  
+      W_LedResponse.ResetRange(_min, _max);
+      Y_LedResponse.ResetRange(_min, _max);
+}
+
 void PollSerialEvents()
 {
     static const int msgSize = 2; // 2 bytes expected
-    if(Serial.available() == msgSize)
+    if(Serial.available() >= msgSize)
     {
         byte startByte = Serial.read();
 
@@ -368,7 +375,46 @@ void PollSerialEvents()
            // Perform transmission
            byte modeByte = Serial.read();
 
+            bool bCalibrate = false;
+
+            // Arg byte
+            if(Serial.available())
+            {
+                byte arg = Serial.read();
+                if(modeByte == 0)
+                {
+                    bCalibrate = (arg == 's');
+                }
+
+                if(modeByte == 1)
+                {
+                    bpm = arg * 2;
+                }
+            }
+            /*
+            if(modeByte == 0)
+            {
+                delay(50);
+                if(Serial.available())
+                {
+                    byte arg = Serial.read();
+                    bCalibrate = (arg == 's');
+                }
+            }
+            else if(modeByte == 1)
+            {
+                delay(50);
+                if(Serial.available())
+                {
+                    byte arg = Serial.read
+                }
+            }
+            */
             mode = modeByte;
+            ledPanel->TurnOff(true);
+
+            if(bCalibrate)
+              Calibrate();
         }
         else
         {

@@ -2,11 +2,18 @@
 #define EFFECTS_BASE_H
 
 #include "Context.h"
+#include "ByteBuffer.h"
 
 enum class EffectType
 {
     PHOTO_EFFECT,
     VIDEO_EFFECT
+};
+
+struct EffectArgs
+{
+    ByteBuffer ArgBuffer;
+    size_t NumArgs;
 };
 
 /*  Represents an Effect that modulates the behavior of the Led Panel
@@ -46,6 +53,7 @@ public:
     virtual void OnApplied() = 0;
     virtual void OnUpdate(float deltaTime) = 0;
     virtual void OnRemoved() = 0;
+    virtual void OnSetArgs(const EffectArgs& args) = 0;
 
     inline EffectType GetType() const { return m_Type; }
 private:
