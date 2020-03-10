@@ -1,5 +1,4 @@
-#include <LedPanel.h>
-#include <Context.h>
+#include <LumetixFwd.h>
 #include <VariableResponse.h>
 #include <ResponseCurves.h>
 

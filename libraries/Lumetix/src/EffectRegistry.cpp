@@ -1,6 +1,6 @@
 #include "EffectRegistry.h"
 
-#include "EffectsFwd.h"
+#include "Effects/EffectsFwd.h"
 
 #define INDEX_NONE -1
 EffectRegistry::EffectRegistry()

@@ -6,7 +6,7 @@
 
 #include "Common.h"
 
-#include "../TLC59116/TLC59116.h"
+#include "../../TLC59116/TLC59116.h"
 
 enum EPanel : uint8_t
 {

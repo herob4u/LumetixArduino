@@ -2,7 +2,7 @@
 #define CONTEXT_H
 
 #include "LedPanel.h"
-#include "../SparkFun_ISL29125_Breakout_Arduino_Library-master/src/SparkFunISL29125.h"
+#include "../../SparkFun_ISL29125_Breakout_Arduino_Library-master/src/SparkFunISL29125.h"
 
 typedef SFE_ISL29125 RGBSensor;
 

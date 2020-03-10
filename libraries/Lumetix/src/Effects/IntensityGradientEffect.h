@@ -1,7 +1,7 @@
 #ifndef INTENSITY_GRADIENT_EFFECT_H
 #define INTENSITY_GRADIENT_EFFECT_H
 
-#include "EffectsBase.h"
+#include "EffectBase.h"
 
 class IntensityGradientEffect : public EffectBase
 {
