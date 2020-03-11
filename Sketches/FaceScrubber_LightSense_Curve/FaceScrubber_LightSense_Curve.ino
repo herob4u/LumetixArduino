@@ -21,8 +21,9 @@
 #define LEFT_PANEL_MASK     0x3
 
 
-static const float red_intensity_multiplier = 0.2;
-static const float blue_intensity_multiplier = 0.3;
+static const float red_intensity_multiplier = 1;
+static const float blue_intensity_multiplier = 1;
+static const float white_intensity_multiplier = 0.5;
 
 static float _min = 0;
 static float RedMin = 266;
@@ -36,7 +37,7 @@ bool warmMode = false;
 /* Variable Responses */
 static VariableResponse W_LedResponse(RBf, _min, _max);
 static VariableResponse Y_LedResponse(RBf, _min, _max);
-static VariableResponse R_LedResponse(Rf, 0, .5);
+static VariableResponse R_LedResponse(RBf, _min, _max);
 static int bIsPaused = 0;
 static int presetIntensity = 150;
 static int mode = 14; // 0 is default color temp correction
@@ -86,6 +87,7 @@ void setup()
     
     W_ResponseCurve.Rebuild();
     Y_ResponseCurve.Rebuild();
+    R_ResponseCurve.Rebuild();
     
     W_LedResponse.SetResponseCurve(W_ResponseCurve);
     Y_LedResponse.SetResponseCurve(Y_ResponseCurve);
@@ -144,6 +146,7 @@ Serial.print("Max: "); Serial.println(_max);
   //float delta = tempDelta(RBf);
   float W_response = W_LedResponse.GetValue();
   float Y_response = Y_LedResponse.GetValue();
+  float R_response = R_LedResponse.GetValue();
   
   Serial.print("Parameter t = "); Serial.println(W_LedResponse.DebugGetParameter());
   Serial.print("Cool Response Value = "); Serial.println(W_response);
@@ -158,22 +161,11 @@ Serial.print("Max: "); Serial.println(_max);
   W_response *= blue_intensity_multiplier;
   Y_response *= red_intensity_multiplier;
   float Yellow_Resp = max(W_response, Y_response);
-  float R_response = Y_response;
-  if (R_response < RedMin) {
-    RedMin = R_response;
-  }
-
-  if (R_response > RedMax) {
-    RedMax = R_response;
-  }
-
-    Serial.print("Red Response Max = "); Serial.println(RedMax);
-  Serial.print("Red Response Min = "); Serial.println(RedMin);
   
   float B_response = max(W_response, Y_response);
   float G_response = max(W_response, Y_response);
  
-  ledPanel->SetBrightness(ELedColor::WHITE, ceil(W_response*255));
+  ledPanel->SetBrightness(ELedColor::WHITE, ceil(W_response*255*white_intensity_multiplier));
   ledPanel->SetBrightness(ELedColor::YELLOW, ceil(Yellow_Resp*255), EUpdateMode::IGNORE_UNSELECTED);
   ledPanel->SetBrightness(ELedColor::RED, ceil(R_response*255));
   ledPanel->SetBrightness(ELedColor::GREEN, ceil(G_response*255));
@@ -359,6 +351,7 @@ void Calibrate()
   
       W_LedResponse.ResetRange(_min, _max);
       Y_LedResponse.ResetRange(_min, _max);
+      R_LedResponse.ResetRange(_min, _max);
 }
 
 void PollSerialEvents()

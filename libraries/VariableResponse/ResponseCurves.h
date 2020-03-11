@@ -25,10 +25,10 @@ static Key Y_CoolWarmResponse[]
 
 static Key R_CCResponse[]
 {
-	{0, 0},	
-	{0.25, 0},	
-	{0.5, 0.1},	
-	{0.75, 0.15},
-	{1, 0.35}
+	{0, 0.2},
+	{0.25, 0.15},
+  {0.5, 0.1},
+	{0.75, 0.05},
+	{1, 0.0}
 };
 #endif // !RESPONSE_CURVES_H
