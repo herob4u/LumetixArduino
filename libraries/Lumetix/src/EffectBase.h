@@ -14,6 +14,12 @@ struct EffectArgs
 {
     ByteBuffer ArgBuffer;
     size_t NumArgs;
+
+    EffectArgs()
+    : ArgBuffer(ByteBuffer::Allocate(1))
+    , NumArgs(0)
+    {
+    }
 };
 
 /*  Represents an Effect that modulates the behavior of the Led Panel

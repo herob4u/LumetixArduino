@@ -1,6 +1,8 @@
 BACKUP/
-Sketches/
-!Sketches/FaceScrubber/
+Sketches/FaceScrubber/
+Sketches/FaceScrubber_LightSense/
+Sketches/ISL29125Basics/
+Sketches/LED_Lighting/
 
 libraries/EVLighting/
 libraries/EVLighting.zip

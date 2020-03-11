@@ -18,6 +18,7 @@ struct ByteBuffer
     ByteBuffer& PutDouble(double d);
     ByteBuffer& PutShort(short s);
     ByteBuffer& PutChar(char c);
+    ByteBuffer& PutBytes(byte* bytes, size_t count);
 
     void        GetBytes(byte* inOutBytes, size_t count);
     byte        GetByte();

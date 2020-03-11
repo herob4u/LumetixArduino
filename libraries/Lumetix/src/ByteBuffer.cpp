@@ -13,6 +13,14 @@ ByteBuffer ByteBuffer::Allocate(size_t numBytes)
     return outBuffer;
 }
 
+ByteBuffer::ByteBuffer()
+    : m_Data(nullptr)
+    , m_Count(0)
+    , m_rpos(0)
+    , m_wpos(0)
+{
+}
+
 ByteBuffer::~ByteBuffer()
 {
     if(m_Data)
@@ -57,6 +65,18 @@ ByteBuffer& ByteBuffer::PutChar(char c)
     return *const_cast<ByteBuffer*>(this);
 }
 
+ByteBuffer& ByteBuffer::PutBytes(byte* bytes, size_t count)
+{
+    if(bytes)
+    {
+        for(int i = 0; i < count; i++)
+        {
+            PutByte(bytes[i]);
+        }
+    }
+
+    return *const_cast<ByteBuffer*>(this);
+}
 
 
 byte ByteBuffer::Get()

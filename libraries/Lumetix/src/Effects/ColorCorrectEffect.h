@@ -1,7 +1,7 @@
 #ifndef COLOR_CORRECT_EFFECT_H
 #define COLOR_CORRECT_EFFECT_H
 
-#include "EffectBase.h"
+#include "../EffectBase.h"
 #include "../../../VariableResponse/VariableResponse.h"
 
 class ColorCorrectEffect : public EffectBase

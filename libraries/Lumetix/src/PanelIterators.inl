@@ -39,6 +39,17 @@ struct PanelIterator
         LOG("MASK: "); LOGN(Mask);
     }
 
+    PanelIterator& operator=(const PanelIterator& Other)
+    {
+        StepCount = Other.StepCount;
+        SelectFlags[EPanel::TOP]    = Other.SelectFlags[EPanel::TOP];
+        SelectFlags[EPanel::RIGHT]  = Other.SelectFlags[EPanel::RIGHT];
+        SelectFlags[EPanel::BOTTOM] = Other.SelectFlags[EPanel::BOTTOM];
+        SelectFlags[EPanel::LEFT]   = Other.SelectFlags[EPanel::LEFT];
+
+        Mask = Other.Mask;
+    }
+
     /* For the currently selected pins by the iterator, set their brightness to the specified value */
     void SetBrightness(byte brightness, EUpdateMode updateMode = EUpdateMode::IGNORE_UNSELECTED)
     {

@@ -79,17 +79,19 @@ void IntensityGradientEffect::OnRemoved()
 
 void IntensityGradientEffect::OnSetArgs(const EffectArgs& args)
 {
-    /* Expecting arguments of type (byte, byte) */
-    if(args.NumArgs == 2)
+    /* Expecting arguments of type (byte, byte, byte) */
+    if(args.NumArgs == 3)
     {
         ByteBuffer buffer = args.ArgBuffer;
-        if(buffer.GetNumBytes() == 2) // 2 bytes
+        if(buffer.GetNumBytes() == 3) // 3 bytes
         {
             byte intensityA = buffer.GetByte();
             byte intensityB = buffer.GetByte();
-
+            byte dir = buffer.GetByte();
+ 
             m_IntensityA = intensityA;
             m_IntensityB = intensityB;
+            m_Dir = (dir == 0 ? EGradientDirection::HORIZONTAL : EGradientDirection::VERTICAL);
 
             // Refresh
             OnApplied();
