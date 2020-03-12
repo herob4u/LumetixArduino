@@ -35,9 +35,9 @@ ByteBuffer& ByteBuffer::PutByte(byte b)
     return *const_cast<ByteBuffer*>(this);
 }
 
-ByteBuffer& ByteBuffer::PutInt(int i)
+ByteBuffer& ByteBuffer::PutInt(long i)
 {
-    Write<int>(i);
+    Write<long>(i);
     return *const_cast<ByteBuffer*>(this);
 }
 
@@ -99,9 +99,9 @@ byte ByteBuffer::GetByte()
     return Read<byte>();
 }
 
-int ByteBuffer::GetInt()
+long ByteBuffer::GetInt()
 {
-    return Read<int>();
+    return Read<long>();
 }
 
 float ByteBuffer::GetFloat()

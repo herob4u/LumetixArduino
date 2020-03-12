@@ -59,7 +59,7 @@ public:
     virtual void OnApplied() = 0;
     virtual void OnUpdate(float deltaTime) = 0;
     virtual void OnRemoved() = 0;
-    virtual void OnSetArgs(const EffectArgs& args) = 0;
+    virtual void OnSetArgs(EffectArgs& args) = 0;
 
     inline EffectType GetType() const { return m_Type; }
 private:

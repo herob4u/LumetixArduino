@@ -7,7 +7,7 @@ class PartyEffect : public EffectBase
 public:
     PartyEffect();
 
-    enum AnimationMode
+    enum AnimationMode : short
     {
         COLOR_SEQ = 0,
         VERTICAL = 1,
@@ -19,7 +19,7 @@ public:
     virtual void OnApplied() override;
     virtual void OnUpdate(float deltaTime) override;
     virtual void OnRemoved() override;
-    virtual void OnSetArgs(const EffectArgs& args) override;
+    virtual void OnSetArgs(EffectArgs& args) override;
 
     void SetBpmDelay(short bpmDelay_ms);
     short GetBpmDelay() const { return m_BpmDelay; }
@@ -40,16 +40,21 @@ protected:
     void DoVerticalAnimUpdate();
     void DoHorizontalAnimUpdate();
     void DoRingAnimUpdate();
-private:
-    unsigned short m_BpmDelay;
-    unsigned short m_ElapsedTime;
-    unsigned short m_SequenceIt;
 
-    bool m_IsActive;
+    float GetRandomizedBPM() const;
+    AnimationMode GetRandomizedAnimation() const;
+private:
+    //unsigned short m_BpmDelay;
+    //unsigned short m_ElapsedTime;
+    float m_BpmDelay;
+    float m_ElapsedTime;
+    unsigned short m_SequenceIt;
 
     typedef void(PartyEffect::*AnimFunction)();
     AnimFunction m_AnimationFunctions[AnimationMode::MAX_VAL];
     AnimationMode m_AnimMode;
+    bool m_RandomizeAnimations;
+
 
     #define NUM_COLORS 5
     /* Sequentially blink with a specified color sequence. In this configuration,

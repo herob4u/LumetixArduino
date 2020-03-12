@@ -109,9 +109,10 @@ void ColorCorrectEffect::Calibrate()
     WarmResponse.ResetRange(newMin, newMax);
 }
 
-void ColorCorrectEffect::OnSetArgs(const EffectArgs& args)
+void ColorCorrectEffect::OnSetArgs(EffectArgs& args)
 {
     // Expecting 1 argument, telling us the new average RBf value OR a symbol for calibration
+    /*
     if(args.NumArgs == 1)
     {
         // See if the message is an already calibrated value for RBf
@@ -132,6 +133,21 @@ void ColorCorrectEffect::OnSetArgs(const EffectArgs& args)
             char c = buffer.GetChar();
             if(c == CALIBRATE_SYMBOL)
             {
+                Calibrate();
+            }
+        }
+    }
+    */
+    if(args.NumArgs == 1)
+    {
+        if(args.ArgBuffer.GetNumBytes() == sizeof(char))
+        {
+            char c = args.ArgBuffer.GetChar();
+            if(c == CALIBRATE_SYMBOL)
+            {
+                LedPanel& panel = gContext->Panel;
+                panel.SetBrightness(EPanel::TOP, ELedColor::RED, 255);
+                delay(500);
                 Calibrate();
             }
         }

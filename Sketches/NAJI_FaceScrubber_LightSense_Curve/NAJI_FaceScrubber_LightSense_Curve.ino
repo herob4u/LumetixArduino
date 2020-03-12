@@ -14,6 +14,8 @@
 #define CHANNELS_COUNT (16)
 #define MSG_TIMEOUT (50) /*ms*/
 
+#define FIXED_MSG_SIZE
+
 static int bIsPaused = 0;
 
 // Declare sensor object
@@ -32,7 +34,7 @@ void setup()
     Serial.begin(9600); // for some reason, any other value causes issues. Cant light LED. Maybe android side bug when selecting baud rate?
     LOGN("Starting...");
     Serial.flush();
-
+    
     tlcmanager.init();
     ledPanel->Init();
     LOGN("Init Panel");
@@ -52,16 +54,11 @@ void setup()
     
     // Led Panel must be fully initialized before using this
     effectRegistry.Init();
-    
+    effectRegistry.ActivateEffect(1);
     
     g_CurrTime = millis()/1000.f;
     delay(25);
 
-    // @TODO: Test if this cast is safe to do!!
-    byte someData = 155;
-    int castData = (int)someData;
-    Serial.println(castData);
-    delay(1000);
     flushSerialInput();
 }
 
@@ -83,13 +80,25 @@ void loop()
 void PollSerialEvents()
 {
     // Received potential START_BYTE and header
-    if(Serial.available() >= 2)
+    if(Serial.available() >= 3)
     {
+        Serial.println("HERE");
+        ledPanel->TurnOff(true);
+        delay(50);
+        
         byte data = Serial.read();
         if(data == START_BYTE)
         {
+            ledPanel->TurnOn(true);
+            delay(50);
+            Serial.println("START BYTE");
+            
             // Header indicating message size
+            #ifndef FIXED_MSG_SIZE
             byte msgSize = Serial.read();
+            #else
+            byte msgSize = 3;
+            #endif
 
             // Message has no content, probably corrupt. Ignore
             if(msgSize < 1)
@@ -99,7 +108,33 @@ void PollSerialEvents()
             if(!WaitForData(msgSize))
               return;
             
-            int effectId = (int)Serial.read();
+            //int effectId = (int)Serial.read();
+            byte effectId = Serial.read();
+
+            if(effectId == 1)
+            {
+                ledPanel->bInterpolates = false;
+                ledPanel->SetBrightness(ELedColor::GREEN, 255);
+                ledPanel->Update(1.f);
+                while(1) {}
+            }
+            else if(effectId == 49) // ascii character representing '1'
+            {
+                ledPanel->bInterpolates = false;
+                ledPanel->SetBrightness(ELedColor::RED, 255);
+                ledPanel->Update(1.f);
+                while(1) {}
+            }
+            if(effectId == 'p')
+            {
+              ledPanel->TurnOn(true);
+              delay(200);
+              ledPanel->TurnOff(false);
+              delay(200);
+              ledPanel->TurnOn(true);
+              delay(200);
+              ledPanel->TurnOff(false);
+            }
             EffectArgs outEffectArgs;
             ParseEffectArgs(effectId, --msgSize, outEffectArgs);
 
@@ -125,10 +160,11 @@ bool WaitForData(byte remainingSize)
         flushSerialInput();
         return false;
     }
-
+    Serial.println("FINISHED WAIT");
     return true;
 }
 
+#ifndef FIXED_MSG_SIZE
 // @TODO: Is the cast from byte to size_t safe? Verify using setup code tests
 ByteBuffer ParseEffectArgs(int effectId, size_t msgSize, EffectArgs& effectArgs)
 {
@@ -215,7 +251,47 @@ ByteBuffer ParseEffectArgs(int effectId, size_t msgSize, EffectArgs& effectArgs)
     effectArgs.ArgBuffer = argBuffer;
     return argBuffer;
 }
+#else
 
+ByteBuffer ParseEffectArgs(byte effectId, size_t msgSize, EffectArgs& effectArgs)
+{
+    LOG("PARSE"); LOGN(effectId);
+    ByteBuffer argBuffer = ByteBuffer::Allocate(msgSize);
+
+    /*
+     *  Effect Ids are defined by our application. They are maintained in the EffectRegistry
+     *  We could optionally handle this parsing in the Effect Registry, but that would be overkill.
+     *  
+     *  ID 0: Color Correct Effect (float RBf), (char calibrateSymbol)
+     *  ID 1: Intensity Gradient Effect (byte intensityA, byte intensityB, byte dir)
+     *  ID 2: Party Effect (float bpmDelay), (byte animMode)
+     */
+    switch(effectId)
+    {
+        /* Color Correction */
+        case 0:
+        {
+            char arg = (char)Serial.read();
+            effectArgs.NumArgs++;
+            argBuffer.PutChar(arg);
+        }
+        break;
+
+        /* BPM */
+        case 'p':
+        {
+            LOGN("BPM");
+            byte arg = Serial.read();
+            effectArgs.NumArgs++;
+            argBuffer.PutByte(arg);
+        }
+        break;
+    }
+
+    effectArgs.ArgBuffer = argBuffer;
+    return argBuffer;
+}
+#endif
 
 void abortReadTransmission()
 {

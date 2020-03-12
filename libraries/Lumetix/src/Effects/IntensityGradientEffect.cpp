@@ -77,7 +77,7 @@ void IntensityGradientEffect::OnRemoved()
 
 }
 
-void IntensityGradientEffect::OnSetArgs(const EffectArgs& args)
+void IntensityGradientEffect::OnSetArgs(EffectArgs& args)
 {
     /* Expecting arguments of type (byte, byte, byte) */
     if(args.NumArgs == 3)

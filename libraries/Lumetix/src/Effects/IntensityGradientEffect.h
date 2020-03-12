@@ -11,7 +11,7 @@ public:
     virtual void OnApplied() override;
     virtual void OnUpdate(float deltaTime) override;
     virtual void OnRemoved() override;
-    virtual void OnSetArgs(const EffectArgs& args) override;
+    virtual void OnSetArgs(EffectArgs& args) override;
 
 private:
     void ApplyVerticalGradient();

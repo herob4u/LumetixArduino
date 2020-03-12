@@ -5,25 +5,25 @@
 
 PartyEffect::PartyEffect()
     : EffectBase(EffectType::VIDEO_EFFECT)
-    , m_BpmDelay(100)
+    , m_BpmDelay(.25f)
     , m_ElapsedTime(0)
     , m_SequenceIt(0)
-    , m_IsActive(false)
-    , m_AnimMode(AnimationMode::COLOR_SEQ)
-    , m_verticalIt(gContext->Panel.VerticalIterator())
+    , m_AnimMode(AnimationMode::HORIZONTAL)
+    , m_RandomizeAnimations(false)
     , m_horizontalIt(gContext->Panel.HorizontalIterator())
-    , m_ringIt(gContext->Panel.RingIterator())
+    , m_verticalIt(gContext->Panel.VerticalIterator())
+    , m_ringIt(gContext->Panel.RingIterator(3))
 {
     m_ColorSequence[0] = ELedColor::BLUE;
     m_ColorSequence[1] = ELedColor::GREEN;
     m_ColorSequence[2] = ELedColor::RED;
-    m_ColorSequence[3] = ELedColor::YELLOW;
+    m_ColorSequence[3] = ELedColor::WHITE;
     m_ColorSequence[4] = ELedColor::YELLOW;
 
     m_SequenceBrightness[0] = 128;
     m_SequenceBrightness[1] = 90;
-    m_SequenceBrightness[2] = 64;
-    m_SequenceBrightness[3] = 32;
+    m_SequenceBrightness[2] = 150;
+    m_SequenceBrightness[3] = 150;
     m_SequenceBrightness[4] = 200;
 
     m_AnimationFunctions[AnimationMode::COLOR_SEQ]  = &PartyEffect::DoSequenceAnimUpdate;
@@ -43,11 +43,17 @@ void PartyEffect::OnUpdate(float deltaTime)
 
     if(m_ElapsedTime >= m_BpmDelay)
     {
+        LOGN("Toggle Party Effect");
+
         // Toggle
         LedPanel& panel = gContext->Panel;
+        
+        // Perform animation step
+        m_RandomizeAnimations ? INVOKE(m_AnimationFunctions[GetRandomizedAnimation()]) :
+                                INVOKE(m_AnimationFunctions[m_AnimMode]);
 
-        m_IsActive ? panel.TurnOff(true) : INVOKE(m_AnimationFunctions[m_AnimMode]);
-        m_IsActive = !m_IsActive;
+        // Reset timer 
+        m_ElapsedTime = 0.f;
     }
 }
 
@@ -56,9 +62,21 @@ void PartyEffect::OnRemoved()
 
 }
 
-void PartyEffect::OnSetArgs(const EffectArgs& args)
+void PartyEffect::OnSetArgs(EffectArgs& args)
 {
+    LOGN("Party Effect Arg");
     // Expects update mode or bpm update
+    LedPanel& panel = gContext->Panel;
+    panel.TurnOn(true);
+    delay(20);
+    panel.TurnOff(true);
+    if(args.NumArgs == 1)
+    {
+        byte bpm_byte = args.ArgBuffer.GetByte();
+
+        panel.TurnOn(true);
+        m_BpmDelay = 2.f * (float)bpm_byte;
+    }
 }
 
 void PartyEffect::SetAnimationMode(AnimationMode mode)
@@ -71,6 +89,26 @@ void PartyEffect::SetBpmDelay(short bpmDelay_ms)
     m_BpmDelay = bpmDelay_ms;
 }
 
+float PartyEffect::GetRandomizedBPM() const
+{
+    const float half_bpm = m_BpmDelay/2.f;
+
+    // Don't ask, accept it as a hack
+    unsigned int select = random(0,2) | random(0,5) | random(0,8);
+    return (select == 0 ? half_bpm : m_BpmDelay);
+
+}
+
+PartyEffect::AnimationMode PartyEffect::GetRandomizedAnimation() const
+{
+    // Don't ask, accept it as a hack
+    unsigned int select = random(0,4) | random(0, 3) | random(3, 5);
+    return (select == 0 ? AnimationMode::COLOR_SEQ:
+            select == 1 ? AnimationMode::VERTICAL:
+            select == 2 ? AnimationMode::HORIZONTAL:
+            AnimationMode::RING);
+}
+
 /* ANIMATION FUNCTIONS */
 void PartyEffect::DoSequenceAnimUpdate()
 {
@@ -78,13 +116,21 @@ void PartyEffect::DoSequenceAnimUpdate()
     byte brightness = m_SequenceBrightness[m_SequenceIt++];
 
     LedPanel& panel = gContext->Panel;
+    panel.TurnOff(true);
 
     /* Turn on the LEDs in accordance to the sequence. Want exclusive lighting, so IGNORE_UNSELECTED */
     panel.SetBrightness(color, brightness, EUpdateMode::IGNORE_UNSELECTED);
+
+    // Wrap around
+    if(m_SequenceIt == NUM_COLORS)
+    {
+        m_SequenceIt = 0;
+    }
 }
 
 void PartyEffect::DoVerticalAnimUpdate()
 {
+
     if(!m_verticalIt)
     {
         LedPanel& panel = gContext->Panel;

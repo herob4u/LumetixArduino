@@ -11,20 +11,11 @@
 #define LED_MASK_ALL ( 0xFFFF)
 
 /* Physical Mapping for our virtual panel where entries are LED pinouts from left to right */
-#define ALTERNATE_MAPPING
-#ifdef ALTERNATE_MAPPING
 static unsigned int PhysicalMapping[16]
 {
     7,6,5,4,3,2,1,0,
     15,14,13,12,11,10,9,8
 };
-#else
-static unsigned int PhysicalMapping[16]
-{
-    7,6,5,4,3,2,1,0,
-    15,14,13,12,11,10,9,8
-};
-#endif // ALTERNATE_CHANNEL
 
 
 
@@ -40,6 +31,8 @@ enum class EGradientDirection : short
     VERTICAL
 };
 
+#define EPSILON 0.00009f
+
 static inline float Lerp(float A, float B, float alpha)
 {
     return (1-alpha)*A + alpha*B;
@@ -48,6 +41,16 @@ static inline float Lerp(float A, float B, float alpha)
 static inline float Clamp(float val, float min, float max)
 {
     return val < min ? min : val > max ? max : val;
+}
+
+static inline float Abs(float val)
+{
+    return (val >= 0 ? val : -val);
+}
+
+static inline bool IsNearlyEqual(float A, float B, float threshold = EPSILON)
+{
+    return (Abs(A-B) <= threshold);
 }
 
 /* Comment out for "release".*/

@@ -11,8 +11,9 @@ EffectRegistry::EffectRegistry()
 void EffectRegistry::Init()
 {
     m_Effects[0] = new ColorCorrectEffect();
-    m_Effects[1] = new IntensityGradientEffect(20, 255, EGradientDirection::VERTICAL);
-    m_Effects[2] = new PartyEffect();
+    m_Effects[1] = new PartyEffect();
+    m_Effects[2] = new IntensityGradientEffect(0, 180, EGradientDirection::VERTICAL);
+
     // ...
     // ...
 }
@@ -68,7 +69,7 @@ bool EffectRegistry::DeactivateEffect()
     return true;
 }
 
-void EffectRegistry::NotifyArgsChanged(const EffectArgs& args)
+void EffectRegistry::NotifyArgsChanged(EffectArgs& args)
 {
     // No active effect to notify
     if(m_ActiveEffect == INDEX_NONE || m_ActiveEffect >= GetNumEffects())

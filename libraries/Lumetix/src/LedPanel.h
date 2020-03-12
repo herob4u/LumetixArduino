@@ -7,6 +7,7 @@
 #include "Common.h"
 
 #include "../../TLC59116/TLC59116.h"
+#include "../../VariableResponse/Curve.h" // For animating overshoot
 
 enum EPanel : uint8_t
 {
@@ -37,7 +38,17 @@ enum class EUpdateMode : uint8_t
     IGNORE_NONZERO
 };
 
-
+/* Led Panel 
+*
+*   Hardware abstraction for the Lumetix LED panel. Configured using 4 board/panels containing
+*   8 LEDs each, totalling 64 LEDs. LEDs are controlled in a coarse-grained fashion using the
+*   overloaded SetBrightness methods. The Led Panel will attempt to smoothly interpolate between
+*   set points of brightness unless explicitly disabled.
+*
+*   The panel also supports an overshoot emulation by detecting abrupt changes in brightness setpoints.
+*   The overshoot then gradually settles over a fixed period of time in an ease in/out fashion. Overshoot
+*   is not the default or expected behavior; it can be enabled explicitly by setting the bOvershoots flag.
+*/
 class LedPanel
 {
 public:
@@ -64,11 +75,6 @@ public:
     /* Set the brightness of all LEDs on the board */
     void SetBrightness(byte brightness, EUpdateMode updateMode = EUpdateMode::IGNORE_UNSELECTED);
 
-    /*  Set brightness for LEDs in a given channel map. A channel map is a direct indicator of selected LED channels
-    *   on a per panel basis. The bit value of each channel corresponds to the toggled state of the LED - ON(1), OFF(0)
-    */
-    void FromChannelMap(int* channelMaps, byte brightness, EUpdateMode updateMode = EUpdateMode::IGNORE_UNSELECTED);
-
     /*  Set brightness for LEDs from a given channel map, where a channel maps are bitflags representing
     *   the toggled state of LEDs in the top, right, bottom, and left panels.
     */
@@ -83,9 +89,16 @@ public:
 
     void TurnOff(bool bImmediate = false);
     void TurnOn(bool bImmediate = false);
+
+    bool bInterpolates;
+    bool bOvershoots;
 private:
     byte BlendBrightness(byte prevVal, byte newVal, EUpdateMode updateMode) const;
     void UpdateLedBuffer(float deltaTime);
+
+    /* Separated from UpdateLedBuffer for now for debugging accessability */
+    void UpdateOvershoot(float deltaTime);
+    void DetectOvershoot(float brightnessA, float brightnessB);
 private:
     static ELedColor m_ColorMap[NUM_CHANNELS];
 
@@ -94,6 +107,18 @@ private:
     */
     byte m_LedBuffer[EPanel::MAX_VAL][NUM_CHANNELS];
     byte m_CurrLedBuffer[EPanel::MAX_VAL][NUM_CHANNELS];
+
+    /* A certain somebody demanded overshoot. We shall govern that using a percentage overshoot
+    *  that shrinks to 0 over time, dictated by some animation curve to control ease in/out.
+    *  Overshoot is detected based on the rate of change of LED brightnesses. Namely, the maximum
+    *  rate of change across all 64 LEDs. Failing to do so will produce overshoots all time when
+    *  performing small adjustments.
+    */
+    float m_PctOvershoot;
+    float m_CurrOvershoot;
+    float m_OvershootProgress;
+    float m_OvershootDetectThreshold;
+    Curve m_OvershootAnimCurve;
 
     float m_TransitionSpeed;
 

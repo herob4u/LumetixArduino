@@ -13,7 +13,7 @@ public:
 
     bool ActivateEffect(unsigned int effectId);
     bool DeactivateEffect();
-    void NotifyArgsChanged(const EffectArgs& args);
+    void NotifyArgsChanged(EffectArgs& args);
 
     inline int GetActiveEffectId() const { return m_ActiveEffect; }
     const EffectBase* GetActiveEffect() const;

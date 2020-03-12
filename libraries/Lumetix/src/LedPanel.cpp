@@ -13,6 +13,13 @@ ELedColor LedPanel::m_ColorMap[] =
 LedPanel::LedPanel(TLC59116Manager& tlcmanager)
     : m_TransitionSpeed(1.f)
     , m_TlcManager(tlcmanager)
+    , bInterpolates(true)
+    , bOvershoots(false)
+    , m_PctOvershoot(0.25f)
+    , m_CurrOvershoot(0.f)
+    , m_OvershootDetectThreshold(25)
+    , m_OvershootProgress(0.f)
+    , m_OvershootAnimCurve(Curve(4))
 {
     /* Zero out the buffers */
     for(int panel = 0; panel < EPanel::MAX_VAL; panel++)
@@ -23,6 +30,12 @@ LedPanel::LedPanel(TLC59116Manager& tlcmanager)
             m_CurrLedBuffer[panel][i] = 0;
         }
     }
+
+    // Init the overshoot curve
+    m_OvershootAnimCurve.AddKey(0.f, 0.f);
+    m_OvershootAnimCurve.AddKey(0.3f, 0.02f);
+    m_OvershootAnimCurve.AddKey(0.6f, 0.8f);
+    m_OvershootAnimCurve.AddKey(1.f, 1.f);
 }
 
 void LedPanel::Init()
@@ -37,8 +50,15 @@ void LedPanel::Init()
 
 void LedPanel::Update(float deltaTime)
 {
-    UpdateLedBuffer(deltaTime);
-    LOGN("Update");
+    if(bOvershoots)
+    {
+        // Update with overshoot
+        UpdateOvershoot(deltaTime);
+    }
+    else
+    {
+        UpdateLedBuffer(deltaTime);
+    }
 }
 
 void LedPanel::SetTransitionSpeed(float scalar)
@@ -71,10 +91,13 @@ void LedPanel::SetBrightness(EPanel panel, ELedColor color, byte brightness, EUp
         if(m_ColorMap[i] == color)
         {
             m_LedBuffer[panel][i] = brightness;
+            DetectOvershoot(m_LedBuffer[panel][i], brightness);
         }
         else if(updateMode == EUpdateMode::ZERO_UNSELECTED)
         {
-            m_LedBuffer[panel][i] = brightness;
+            //m_LedBuffer[panel][i] = brightness;
+            m_LedBuffer[panel][i] = 0;
+            DetectOvershoot(m_LedBuffer[panel][i], 0);
         }
     }
 }
@@ -87,6 +110,7 @@ void LedPanel::SetBrightness(EPanel panel, byte brightness, EUpdateMode updateMo
         byte newBrightness = BlendBrightness(currBrightness, brightness, updateMode);
 
         m_LedBuffer[panel][i] = newBrightness;
+        DetectOvershoot(m_LedBuffer[panel][i], newBrightness);
     }
 }
 
@@ -100,57 +124,11 @@ void LedPanel::SetBrightness(byte brightness, EUpdateMode updateMode)
             byte newBrightness = BlendBrightness(currBrightness, brightness, updateMode);
 
             m_LedBuffer[panel][i] = newBrightness;
+            DetectOvershoot(m_LedBuffer[panel][i], newBrightness);
         }
     }
 }
 
-void LedPanel::FromChannelMap(int* channelMaps, byte brightness, EUpdateMode updateMode)
-{
-#if 0
-    for(int panel = 0; panel < 4; panel++)
-    {
-        for(int i = 0; i < NUM_CHANNELS; i++)
-        {
-            int enabled = channelMaps[panel][i];
-            LOG("[");LOG(panel);LOG("]");
-            LOG("["); LOG(i); LOG("]");
-            LOG("=");
-            LOGN(i);
-            Serial.flush();
-            byte currBrightness = m_LedBuffer[panel][i];
-            byte newBrightness = BlendBrightness(currBrightness, brightness * enabled, updateMode);
-
-            m_LedBuffer[panel][i] = newBrightness;
-            m_CurrLedBuffer[panel][i] = newBrightness;
-        }
-    }
-    LOGN("FromChannelMap update");
-    UpdateLedBuffer(1);
-#else
-    for(int panel = 0; panel < 4; panel++)
-    {
-        for(int i = 0; i < NUM_CHANNELS; i++)
-        {
-            int enabled = 1;//channelMaps[i + 16*panel];
-            LOG("["); LOG(panel); LOG("]");
-            LOG("["); LOG(i); LOG("]");
-            LOG("=");
-            LOGN(enabled);
-            Serial.flush();
-
-            byte currBrightness = m_LedBuffer[panel][i];
-            byte newBrightness = BlendBrightness(currBrightness, brightness * enabled, updateMode);
-
-            m_LedBuffer[panel][i] = newBrightness;
-            m_CurrLedBuffer[panel][i] = newBrightness;
-        }
-    }
-
-    UpdateLedBuffer(1);
-#endif
-}
-
-/* @TODO: Use Blend Brightness to support update modes */
 void LedPanel::FromChannelMap(unsigned short top, unsigned short right, unsigned short bottom, unsigned short left, byte brightness, EUpdateMode updateMode)
 {
     for(int channel = 0; channel < NUM_CHANNELS; channel++)
@@ -163,9 +141,9 @@ void LedPanel::FromChannelMap(unsigned short top, unsigned short right, unsigned
 
         // Perform update mode blending based on previous and new target values
         topBrightness       = BlendBrightness(m_LedBuffer[0][channel], topBrightness, updateMode);
-        rightBrightness     = BlendBrightness(m_LedBuffer[0][channel], rightBrightness, updateMode);
-        bottomBrightness    = BlendBrightness(m_LedBuffer[0][channel], bottomBrightness, updateMode);
-        leftBrightness      = BlendBrightness(m_LedBuffer[0][channel], leftBrightness, updateMode);
+        rightBrightness     = BlendBrightness(m_LedBuffer[1][channel], rightBrightness, updateMode);
+        bottomBrightness    = BlendBrightness(m_LedBuffer[2][channel], bottomBrightness, updateMode);
+        leftBrightness      = BlendBrightness(m_LedBuffer[3][channel], leftBrightness, updateMode);
 
         // Update both the current and target buffer for immediate change
         m_LedBuffer[0][channel] = topBrightness;
@@ -224,12 +202,74 @@ void LedPanel::UpdateLedBuffer(float deltaTime)
     {
         for(int i = 0; i < NUM_CHANNELS; i++)
         {
-            /* Simple linear interpolation of values */
-            byte newIntensity = Lerp(m_CurrLedBuffer[panel][i], m_LedBuffer[panel][i], deltaTime * m_TransitionSpeed);
-            m_CurrLedBuffer[panel][i] = newIntensity;
+            byte newIntensity = 0;
 
+            /* Simple linear interpolation of values */
+            if(bInterpolates)
+            {
+                newIntensity = Lerp(m_CurrLedBuffer[panel][i], m_LedBuffer[panel][i], deltaTime * m_TransitionSpeed);
+            }
+            else
+            {
+                newIntensity = m_LedBuffer[panel][i];
+            }
+
+            m_CurrLedBuffer[panel][i] = newIntensity;
             m_TlcManager[panel].pwm(i, newIntensity);
         }
+    }
+}
+
+void LedPanel::UpdateOvershoot(float deltaTime)
+{
+    for(int panel = 0; panel < EPanel::MAX_VAL; panel++)
+    {
+        for(int i = 0; i < NUM_CHANNELS; i++)
+        {
+            float newIntensity = 0;
+
+            /* Simple linear interpolation of values */
+            if(bInterpolates)
+            {
+                newIntensity = Lerp(m_CurrLedBuffer[panel][i], m_LedBuffer[panel][i], deltaTime * m_TransitionSpeed);
+            }
+            else
+            {
+                newIntensity = m_LedBuffer[panel][i];
+            }
+
+            // Very scared of floating point to byte conversion if exactly 0 or 255 - possible error causes overflow
+            newIntensity = Clamp(newIntensity, 0.001f, 254.9f);
+            m_CurrLedBuffer[panel][i] = (byte)newIntensity;
+
+            // Use the overshot intensity. If the overshoot has already settled, we return the original newIntensity
+            const float overshootIntensity = Clamp((newIntensity + newIntensity*m_CurrOvershoot), 0.001f, 254.9f);
+            m_TlcManager[panel].pwm(i, overshootIntensity);
+        }
+    }
+
+    // Animate the overshoot to settle down over time to a value of 0.
+    if(m_CurrOvershoot != 0.f)
+    {
+        m_OvershootProgress += deltaTime;
+        m_OvershootProgress = Clamp(m_OvershootProgress, 0.f, 1.f);
+        const float overshootAlpha = m_OvershootAnimCurve.Evaluate(m_OvershootProgress);
+        m_CurrOvershoot = Lerp(m_CurrOvershoot, 0.f, overshootAlpha);
+
+        if(IsNearlyEqual(m_CurrOvershoot, 0.f, 0.01f))
+        {
+            m_CurrOvershoot = 0.f;
+        }
+    }
+}
+
+void LedPanel::DetectOvershoot(float brightnessA, float brightnessB)
+{
+    // If we exceed the threshold, notify of an overshoot unless it was already detected
+    if(Abs(brightnessA - brightnessB) >= m_OvershootDetectThreshold && m_CurrOvershoot != m_PctOvershoot)
+    {
+        m_CurrOvershoot = m_PctOvershoot;
+        m_OvershootProgress = 0.f;
     }
 }
 

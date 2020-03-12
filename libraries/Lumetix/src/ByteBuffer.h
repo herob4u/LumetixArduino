@@ -13,7 +13,7 @@ struct ByteBuffer
     ~ByteBuffer();
 
     ByteBuffer& PutByte(byte b);
-    ByteBuffer& PutInt(int i);  // IMPORTANT. Size mismatch between Arduino and Android possible. Be explicit! (uint32_t ?)
+    ByteBuffer& PutInt(long i);  // IMPORTANT. Size mismatch between Arduino and Android possible. Be explicit! (uint32_t ?). "FIXED": Using long for 4-bytes
     ByteBuffer& PutFloat(float f);
     ByteBuffer& PutDouble(double d);
     ByteBuffer& PutShort(short s);
@@ -22,7 +22,7 @@ struct ByteBuffer
 
     void        GetBytes(byte* inOutBytes, size_t count);
     byte        GetByte();
-    int         GetInt();
+    long        GetInt();
     float       GetFloat();
     double      GetDouble();
     short       GetShort();
