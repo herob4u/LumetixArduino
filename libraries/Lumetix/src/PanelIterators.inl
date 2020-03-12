@@ -79,11 +79,13 @@ struct PanelIterator
         LOG("Left: ");      LOGN(SelectFlags[3]);
         LOG("\n");
     }
+
+    /* Makes either ends of the panel traverse in opposite directions */
+    bool bMirror;
 protected:
     size_t StepCount;
     unsigned short SelectFlags[EPanel::MAX_VAL];
     unsigned short Mask;     // Masking operation that allows selecting neighboring LEDs from a given selection
-    bool bMirror;
     LedPanel& Panel;
 };
 
