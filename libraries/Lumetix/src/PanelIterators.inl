@@ -79,9 +79,6 @@ struct PanelIterator
         LOG("Left: ");      LOGN(SelectFlags[3]);
         LOG("\n");
     }
-
-    /* Makes either ends of the panel traverse in opposite directions */
-    bool bMirror;
 protected:
     size_t StepCount;
     unsigned short SelectFlags[EPanel::MAX_VAL];
@@ -126,7 +123,7 @@ struct VerticalPanelIterator : public PanelIterator
             SelectFlags[EPanel::TOP] = 0;
             SelectFlags[EPanel::RIGHT] = (LED_MASK_REVERSE(Mask) >> StepCount); //(Mask << StepCount);
             SelectFlags[EPanel::BOTTOM] = 0;
-            SelectFlags[EPanel::LEFT] = bMirror ? (LED_MASK_REVERSE(Mask) >> StepCount) : (Mask << StepCount);
+            SelectFlags[EPanel::LEFT] = (Mask << StepCount);
         }
 
         StepCount++;
@@ -147,7 +144,7 @@ struct VerticalPanelIterator : public PanelIterator
             SelectFlags[EPanel::TOP] = 0;
             SelectFlags[EPanel::RIGHT] = (Mask << StepCount);
             SelectFlags[EPanel::BOTTOM] = 0;
-            SelectFlags[EPanel::LEFT] = bMirror ? (Mask << StepCount) : (LED_MASK_REVERSE(Mask) >> StepCount);
+            SelectFlags[EPanel::LEFT] = (LED_MASK_REVERSE(Mask) >> StepCount);
         }
 
         StepCount--;
@@ -188,7 +185,7 @@ struct HorizontalPanelIterator : public PanelIterator
         {
             SelectFlags[EPanel::TOP] = (Mask << StepCount);
             SelectFlags[EPanel::RIGHT] = 0;
-            SelectFlags[EPanel::BOTTOM] = bMirror ? (Mask << StepCount) : (LED_MASK_REVERSE(Mask) >> StepCount); // bottom is reversed?
+            SelectFlags[EPanel::BOTTOM] = (LED_MASK_REVERSE(Mask) >> StepCount); // bottom is reversed?
             SelectFlags[EPanel::LEFT] = 0;
         }
 
@@ -209,7 +206,7 @@ struct HorizontalPanelIterator : public PanelIterator
         {
             SelectFlags[EPanel::TOP] = (LED_MASK_REVERSE(Mask) >> StepCount);
             SelectFlags[EPanel::RIGHT] = 0;
-            SelectFlags[EPanel::BOTTOM] = bMirror ? (LED_MASK_REVERSE(Mask) >> StepCount) : (Mask << StepCount);
+            SelectFlags[EPanel::BOTTOM] = (Mask << StepCount);
             SelectFlags[EPanel::LEFT] = 0;
         }
 
@@ -248,17 +245,9 @@ struct RingPanelIterator : public PanelIterator
         
         SelectFlags[EPanel::TOP]    = panel == 0 ? (Mask << channel) : 0;
         SelectFlags[EPanel::RIGHT]  = panel == 1 ? (LED_MASK_REVERSE(Mask) >> channel) : 0;
+        SelectFlags[EPanel::BOTTOM] = panel == 2 ? (LED_MASK_REVERSE(Mask) >> channel) : 0; // Assumes bottom is reversed, needs validation
+        SelectFlags[EPanel::LEFT]   = panel == 3 ? (Mask << channel) : 0;
 
-        if(bMirror)
-        {
-            SelectFlags[EPanel::BOTTOM] = panel == 2 ? (Mask << channel) : 0;
-            SelectFlags[EPanel::LEFT]   = panel == 3 ? (LED_MASK_REVERSE(Mask) >> channel) : 0;
-        }
-        else
-        {
-            SelectFlags[EPanel::BOTTOM] = panel == 2 ? (LED_MASK_REVERSE(Mask) >> channel) : 0; // Assumes bottom is reversed, needs validation
-            SelectFlags[EPanel::LEFT]   = panel == 3 ? (Mask << channel) : 0;
-        }
     }
 
     void operator--()
@@ -270,17 +259,6 @@ struct RingPanelIterator : public PanelIterator
         SelectFlags[EPanel::RIGHT]  = panel == 1 ? (Mask << channel) : 0;
         SelectFlags[EPanel::BOTTOM] = panel == 2 ? (Mask << channel) : 0; // Assumes bottom is reversed, needs validation
         SelectFlags[EPanel::LEFT]   = panel == 3 ? (LED_MASK_REVERSE(Mask) >> channel) : 0;
-
-        if(bMirror)
-        {
-            SelectFlags[EPanel::BOTTOM] = panel == 2 ? (LED_MASK_REVERSE(Mask) >> channel) : 0; // Assumes bottom is reversed, needs validation
-            SelectFlags[EPanel::LEFT] = panel   == 3 ? (Mask << channel) : 0;
-        }
-        else
-        {
-            SelectFlags[EPanel::BOTTOM] = panel == 2 ? (Mask << channel) : 0; // Assumes bottom is reversed, needs validation
-            SelectFlags[EPanel::LEFT] = panel   == 3 ? (LED_MASK_REVERSE(Mask) >> channel) : 0;
-        }
     }
 
     operator bool()

@@ -13,7 +13,7 @@ void EffectRegistry::Init()
     m_Effects[0] = new ColorCorrectEffect();
     m_Effects[1] = new PartyEffect();
     m_Effects[2] = new IntensityGradientEffect(0, 180, EGradientDirection::VERTICAL);
-
+    m_Effects[3] = new ColorFilterEffect();
     // ...
     // ...
 }

@@ -4,6 +4,7 @@
 #include "../EffectBase.h"
 #include "../../../VariableResponse/VariableResponse.h"
 
+#define CC_RED_ATTENUATION
 class ColorCorrectEffect : public EffectBase
 {
 public:
@@ -20,12 +21,13 @@ protected:
 
     float RIntensityMultiplier;
     float BIntensityMultiplier;
+    float WIntensityMultiplier;
 private:
     static const float s_DefaultMinResponse;
     static const float s_DefaultMaxResponse;
 
     VariableResponse WarmResponse; // Response of warm colors to a cool input
     VariableResponse CoolResponse; // Response of cool colors to a warm input
-    
+    VariableResponse RedResponse;
 };
 #endif // !COLOR_CORRECT_EFFECT_H

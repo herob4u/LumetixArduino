@@ -2,3 +2,4 @@
 #include "ColorCorrectEffect.h"
 #include "IntensityGradientEffect.h"
 #include "PartyEffect.h"
+#include "ColorFilterEffect.h"

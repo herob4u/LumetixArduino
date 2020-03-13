@@ -14,12 +14,6 @@ LedPanel::LedPanel(TLC59116Manager& tlcmanager)
     : m_TransitionSpeed(1.f)
     , m_TlcManager(tlcmanager)
     , bInterpolates(true)
-    , bOvershoots(false)
-    , m_PctOvershoot(0.25f)
-    , m_CurrOvershoot(0.f)
-    , m_OvershootDetectThreshold(25)
-    , m_OvershootProgress(0.f)
-    , m_OvershootAnimCurve(Curve(4))
 {
     /* Zero out the buffers */
     for(int panel = 0; panel < EPanel::MAX_VAL; panel++)
@@ -30,12 +24,6 @@ LedPanel::LedPanel(TLC59116Manager& tlcmanager)
             m_CurrLedBuffer[panel][i] = 0;
         }
     }
-
-    // Init the overshoot curve
-    m_OvershootAnimCurve.AddKey(0.f, 0.f);
-    m_OvershootAnimCurve.AddKey(0.3f, 0.02f);
-    m_OvershootAnimCurve.AddKey(0.6f, 0.8f);
-    m_OvershootAnimCurve.AddKey(1.f, 1.f);
 }
 
 void LedPanel::Init()
@@ -50,15 +38,7 @@ void LedPanel::Init()
 
 void LedPanel::Update(float deltaTime)
 {
-    if(bOvershoots)
-    {
-        // Update with overshoot
-        UpdateOvershoot(deltaTime);
-    }
-    else
-    {
-        UpdateLedBuffer(deltaTime);
-    }
+    UpdateLedBuffer(deltaTime);
 }
 
 void LedPanel::SetTransitionSpeed(float scalar)
@@ -91,13 +71,11 @@ void LedPanel::SetBrightness(EPanel panel, ELedColor color, byte brightness, EUp
         if(m_ColorMap[i] == color)
         {
             m_LedBuffer[panel][i] = brightness;
-            DetectOvershoot(m_LedBuffer[panel][i], brightness);
         }
         else if(updateMode == EUpdateMode::ZERO_UNSELECTED)
         {
             //m_LedBuffer[panel][i] = brightness;
             m_LedBuffer[panel][i] = 0;
-            DetectOvershoot(m_LedBuffer[panel][i], 0);
         }
     }
 }
@@ -110,7 +88,6 @@ void LedPanel::SetBrightness(EPanel panel, byte brightness, EUpdateMode updateMo
         byte newBrightness = BlendBrightness(currBrightness, brightness, updateMode);
 
         m_LedBuffer[panel][i] = newBrightness;
-        DetectOvershoot(m_LedBuffer[panel][i], newBrightness);
     }
 }
 
@@ -124,7 +101,6 @@ void LedPanel::SetBrightness(byte brightness, EUpdateMode updateMode)
             byte newBrightness = BlendBrightness(currBrightness, brightness, updateMode);
 
             m_LedBuffer[panel][i] = newBrightness;
-            DetectOvershoot(m_LedBuffer[panel][i], newBrightness);
         }
     }
 }
@@ -217,59 +193,6 @@ void LedPanel::UpdateLedBuffer(float deltaTime)
             m_CurrLedBuffer[panel][i] = newIntensity;
             m_TlcManager[panel].pwm(i, newIntensity);
         }
-    }
-}
-
-void LedPanel::UpdateOvershoot(float deltaTime)
-{
-    for(int panel = 0; panel < EPanel::MAX_VAL; panel++)
-    {
-        for(int i = 0; i < NUM_CHANNELS; i++)
-        {
-            float newIntensity = 0;
-
-            /* Simple linear interpolation of values */
-            if(bInterpolates)
-            {
-                newIntensity = Lerp(m_CurrLedBuffer[panel][i], m_LedBuffer[panel][i], deltaTime * m_TransitionSpeed);
-            }
-            else
-            {
-                newIntensity = m_LedBuffer[panel][i];
-            }
-
-            // Very scared of floating point to byte conversion if exactly 0 or 255 - possible error causes overflow
-            newIntensity = Clamp(newIntensity, 0.001f, 254.9f);
-            m_CurrLedBuffer[panel][i] = (byte)newIntensity;
-
-            // Use the overshot intensity. If the overshoot has already settled, we return the original newIntensity
-            const float overshootIntensity = Clamp((newIntensity + newIntensity*m_CurrOvershoot), 0.001f, 254.9f);
-            m_TlcManager[panel].pwm(i, overshootIntensity);
-        }
-    }
-
-    // Animate the overshoot to settle down over time to a value of 0.
-    if(m_CurrOvershoot != 0.f)
-    {
-        m_OvershootProgress += deltaTime;
-        m_OvershootProgress = Clamp(m_OvershootProgress, 0.f, 1.f);
-        const float overshootAlpha = m_OvershootAnimCurve.Evaluate(m_OvershootProgress);
-        m_CurrOvershoot = Lerp(m_CurrOvershoot, 0.f, overshootAlpha);
-
-        if(IsNearlyEqual(m_CurrOvershoot, 0.f, 0.01f))
-        {
-            m_CurrOvershoot = 0.f;
-        }
-    }
-}
-
-void LedPanel::DetectOvershoot(float brightnessA, float brightnessB)
-{
-    // If we exceed the threshold, notify of an overshoot unless it was already detected
-    if(Abs(brightnessA - brightnessB) >= m_OvershootDetectThreshold && m_CurrOvershoot != m_PctOvershoot)
-    {
-        m_CurrOvershoot = m_PctOvershoot;
-        m_OvershootProgress = 0.f;
     }
 }
 

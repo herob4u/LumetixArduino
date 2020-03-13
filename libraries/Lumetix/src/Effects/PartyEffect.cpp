@@ -8,7 +8,7 @@ PartyEffect::PartyEffect()
     , m_BpmDelay(.25f)
     , m_ElapsedTime(0)
     , m_SequenceIt(0)
-    , m_AnimMode(AnimationMode::HORIZONTAL)
+    , m_AnimMode(AnimationMode::COLOR_SEQ)
     , m_RandomizeAnimations(false)
     , m_horizontalIt(gContext->Panel.HorizontalIterator())
     , m_verticalIt(gContext->Panel.VerticalIterator())
@@ -43,7 +43,7 @@ void PartyEffect::OnUpdate(float deltaTime)
 
     if(m_ElapsedTime >= m_BpmDelay)
     {
-        LOGN("Toggle Party Effect");
+        Serial.println("Toggle Party Effect");
 
         // Toggle
         LedPanel& panel = gContext->Panel;
@@ -51,6 +51,7 @@ void PartyEffect::OnUpdate(float deltaTime)
         // Perform animation step
         m_RandomizeAnimations ? INVOKE(m_AnimationFunctions[GetRandomizedAnimation()]) :
                                 INVOKE(m_AnimationFunctions[m_AnimMode]);
+        //INVOKE(m_AnimationFunctions[m_AnimMode]);
 
         // Reset timer 
         m_ElapsedTime = 0.f;
@@ -67,15 +68,15 @@ void PartyEffect::OnSetArgs(EffectArgs& args)
     LOGN("Party Effect Arg");
     // Expects update mode or bpm update
     LedPanel& panel = gContext->Panel;
-    panel.TurnOn(true);
-    delay(20);
-    panel.TurnOff(true);
+
     if(args.NumArgs == 1)
     {
         byte bpm_byte = args.ArgBuffer.GetByte();
-
+        LOG("Arg: "); LOGN(bpm_byte);
         panel.TurnOn(true);
-        m_BpmDelay = 2.f * (float)bpm_byte;
+        panel.TurnOff(true);
+        m_BpmDelay = (60000.f/(float)bpm_byte)/1000.f;
+        LOG("Delay: ");LOGN(m_BpmDelay);
     }
 }
 
@@ -86,7 +87,8 @@ void PartyEffect::SetAnimationMode(AnimationMode mode)
 
 void PartyEffect::SetBpmDelay(short bpmDelay_ms)
 {
-    m_BpmDelay = bpmDelay_ms;
+    Serial.print("newbpm: ");Serial.println(bpmDelay_ms);
+    m_BpmDelay = (float)bpmDelay_ms/1000.f;
 }
 
 float PartyEffect::GetRandomizedBPM() const
@@ -102,11 +104,13 @@ float PartyEffect::GetRandomizedBPM() const
 PartyEffect::AnimationMode PartyEffect::GetRandomizedAnimation() const
 {
     // Don't ask, accept it as a hack
-    unsigned int select = random(0,4) | random(0, 3) | random(3, 5);
+    unsigned int select = random(0,4) | random(0, 3) | random(3, 4);
+    LOGN(select);
     return (select == 0 ? AnimationMode::COLOR_SEQ:
             select == 1 ? AnimationMode::VERTICAL:
             select == 2 ? AnimationMode::HORIZONTAL:
-            AnimationMode::RING);
+            select == 3 ? AnimationMode::RING:
+            m_AnimMode);
 }
 
 /* ANIMATION FUNCTIONS */

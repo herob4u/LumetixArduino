@@ -40,7 +40,7 @@ static VariableResponse Y_LedResponse(RBf, _min, _max);
 static VariableResponse R_LedResponse(RBf, _min, _max);
 static int bIsPaused = 0;
 static int presetIntensity = 150;
-static int mode = 14; // 0 is default color temp correction
+static int mode = 0; // 0 is default color temp correction
 static int bpm = 100;
 
 
@@ -356,7 +356,7 @@ void Calibrate()
 
 void PollSerialEvents()
 {
-    static const int msgSize = 2; // 2 bytes expected
+    static const int msgSize = 3; // 2 bytes expected
     if(Serial.available() >= msgSize)
     {
         byte startByte = Serial.read();

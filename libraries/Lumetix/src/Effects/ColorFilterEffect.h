@@ -32,7 +32,7 @@ protected:
     void ApplyFilter(byte brightness);
 private:
     FilterType m_ActiveFilter;
-    float m_StrobeFrequency; // In radians
+    float m_StrobeFrequency; // 1/second
     float m_StrobeOffset;    // 0 - 255
     float m_StrobeAmplitude; // Scalar
 

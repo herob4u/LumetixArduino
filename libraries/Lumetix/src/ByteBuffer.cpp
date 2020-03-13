@@ -25,44 +25,61 @@ ByteBuffer::~ByteBuffer()
 {
     if(m_Data)
     {
-        delete m_Data;
+        free (m_Data);
+        m_Data = nullptr;
     }
+}
+
+ByteBuffer& ByteBuffer::Resize(size_t numBytes)
+{
+    if(m_Data)
+    {
+        free(m_Data);
+        m_Data = nullptr;
+    }
+
+    m_Count = numBytes;
+    m_rpos = 0;
+    m_wpos = 0;
+    m_Data = (byte*)malloc(sizeof(byte) * numBytes);
+
+    return *this;
 }
 
 ByteBuffer& ByteBuffer::PutByte(byte b)
 {
     Write<byte>(b);
-    return *const_cast<ByteBuffer*>(this);
+    return *this;
 }
 
 ByteBuffer& ByteBuffer::PutInt(long i)
 {
     Write<long>(i);
-    return *const_cast<ByteBuffer*>(this);
+    return *this;
 }
 
 ByteBuffer& ByteBuffer::PutFloat(float f)
 {
     Write<float>(f);
-    return *const_cast<ByteBuffer*>(this);
+    return *this;
 }
 
 ByteBuffer& ByteBuffer::PutDouble(double d)
 {
     Write<double>(d);
-    return *const_cast<ByteBuffer*>(this);
+    return *this;
 }
 
 ByteBuffer& ByteBuffer::PutShort(short s)
 {
     Write<short>(s);
-    return *const_cast<ByteBuffer*>(this);
+    return *this;
 }
 
 ByteBuffer& ByteBuffer::PutChar(char c)
 {
     Write<char>(c);
-    return *const_cast<ByteBuffer*>(this);
+    return *this;
 }
 
 ByteBuffer& ByteBuffer::PutBytes(byte* bytes, size_t count)
@@ -75,7 +92,7 @@ ByteBuffer& ByteBuffer::PutBytes(byte* bytes, size_t count)
         }
     }
 
-    return *const_cast<ByteBuffer*>(this);
+    return *this;
 }
 
 

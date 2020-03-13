@@ -1,4 +1,5 @@
 #include <LumetixFwd.h>
+#include "Effects/PartyEffect.h"
 #include <VariableResponse.h>
 #include <ResponseCurves.h>
 #include <SparkFunISL29125.h>
@@ -12,7 +13,7 @@
 #define START_BYTE (0x20)
 #define STOP_BYTE (0X7F)
 #define CHANNELS_COUNT (16)
-#define MSG_TIMEOUT (50) /*ms*/
+#define MSG_TIMEOUT (5000) /*ms*/
 
 #define FIXED_MSG_SIZE
 
@@ -51,10 +52,11 @@ void setup()
       Serial.flush();
       abort();
     }
-    
     // Led Panel must be fully initialized before using this
     effectRegistry.Init();
-    effectRegistry.ActivateEffect(1);
+    LOGN("Effects Init");
+    
+    effectRegistry.ActivateEffect(0);
     
     g_CurrTime = millis()/1000.f;
     delay(25);
@@ -90,14 +92,14 @@ void PollSerialEvents()
         if(data == START_BYTE)
         {
             ledPanel->TurnOn(true);
-            delay(50);
+            delay(150);
             Serial.println("START BYTE");
             
             // Header indicating message size
             #ifndef FIXED_MSG_SIZE
             byte msgSize = Serial.read();
             #else
-            byte msgSize = 3;
+            byte msgSize = 2;
             #endif
 
             // Message has no content, probably corrupt. Ignore
@@ -114,27 +116,20 @@ void PollSerialEvents()
             if(effectId == 1)
             {
                 ledPanel->bInterpolates = false;
-                ledPanel->SetBrightness(ELedColor::GREEN, 255);
+                ledPanel->SetBrightness(ELedColor::GREEN, 255, EUpdateMode::ZERO_UNSELECTED);
                 ledPanel->Update(1.f);
-                while(1) {}
+                delay(1000);
             }
-            else if(effectId == 49) // ascii character representing '1'
+            else if(effectId == 50) // ascii character representing '1'
             {
                 ledPanel->bInterpolates = false;
-                ledPanel->SetBrightness(ELedColor::RED, 255);
+                ledPanel->SetBrightness(ELedColor::RED, 255, EUpdateMode::ZERO_UNSELECTED);
                 ledPanel->Update(1.f);
                 while(1) {}
             }
-            if(effectId == 'p')
-            {
-              ledPanel->TurnOn(true);
-              delay(200);
-              ledPanel->TurnOff(false);
-              delay(200);
-              ledPanel->TurnOn(true);
-              delay(200);
-              ledPanel->TurnOff(false);
-            }
+            if(effectId >= 2 && effectId <= 11)
+              effectId = 3;
+            
             EffectArgs outEffectArgs;
             ParseEffectArgs(effectId, --msgSize, outEffectArgs);
 
@@ -158,105 +153,22 @@ bool WaitForData(byte remainingSize)
     if(Serial.available() < remainingSize)
     {
         flushSerialInput();
+        LOGN("TIMEOUT");
         return false;
     }
-    Serial.println("FINISHED WAIT");
     return true;
 }
 
 #ifndef FIXED_MSG_SIZE
-// @TODO: Is the cast from byte to size_t safe? Verify using setup code tests
-ByteBuffer ParseEffectArgs(int effectId, size_t msgSize, EffectArgs& effectArgs)
-{
-    ByteBuffer argBuffer = ByteBuffer::Allocate(msgSize);
 
-    /*
-     *  Effect Ids are defined by our application. They are maintained in the EffectRegistry
-     *  We could optionally handle this parsing in the Effect Registry, but that would be overkill.
-     *  
-     *  ID 0: Color Correct Effect (float RBf), (char calibrateSymbol)
-     *  ID 1: Intensity Gradient Effect (byte intensityA, byte intensityB, byte dir)
-     *  ID 2: Party Effect (float bpmDelay), (byte animMode)
-     */
-    switch(effectId)
-    {
-        /* Color Correction */
-        case 0:
-        {
-            if(msgSize == sizeof(float))
-            {
-                effectArgs.NumArgs++;
-                byte RBf[4];
-                Serial.readBytes(RBf, sizeof(float));
-
-                // Populates buffer with RBf value
-                argBuffer.PutBytes(RBf, sizeof(float));
-            }
-            else if(msgSize == sizeof(char))
-            {
-                effectArgs.NumArgs++;
-                char c = (char)Serial.read();
-
-                // Populate buffer with calibration symbol
-                argBuffer.PutChar(c);
-            }
-        }
-        break;
-
-        /* Intensity Gradient */
-        case 1:
-        {
-            // Expecting at most 3 bytes for this effect
-            const size_t argSize = 3*sizeof(byte);
-            
-            if(msgSize > 0 && msgSize <= argSize)
-            {
-                for(int i = 0; i < msgSize; i++)
-                {
-                    effectArgs.NumArgs++;
-                    byte arg = Serial.read();
-                    argBuffer.PutByte(arg);
-                }
-            }
-        }
-        break;
-
-        /* Party Effect */
-        case 2:
-        {
-            // Expecting either a float or a byte
-            if(msgSize == sizeof(float))
-            {
-                effectArgs.NumArgs++;
-                byte bpmDelay[4];
-                Serial.readBytes(bpmDelay, sizeof(float));
-
-                // Populates buffer with BPM delay value
-                argBuffer.PutBytes(bpmDelay, sizeof(float));
-            }
-            else if(msgSize == sizeof(byte))
-            {
-                effectArgs.NumArgs++;
-                byte animMode = Serial.read();
-
-                // Populate buffer with animation mode "enum"
-                argBuffer.PutByte(animMode);
-            }
-        }
-        break;
-
-        default: return argBuffer;
-    }
-
-    effectArgs.ArgBuffer = argBuffer;
-    return argBuffer;
-}
 #else
 
-ByteBuffer ParseEffectArgs(byte effectId, size_t msgSize, EffectArgs& effectArgs)
+void ParseEffectArgs(byte effectId, size_t msgSize, EffectArgs& effectArgs)
 {
-    LOG("PARSE"); LOGN(effectId);
-    ByteBuffer argBuffer = ByteBuffer::Allocate(msgSize);
+    LOG("PARSE "); LOGN(msgSize);
+    Serial.flush();
+    effectArgs.ArgBuffer.Resize(msgSize);
+    ByteBuffer& argBuffer = effectArgs.ArgBuffer;
 
     /*
      *  Effect Ids are defined by our application. They are maintained in the EffectRegistry
@@ -278,7 +190,7 @@ ByteBuffer ParseEffectArgs(byte effectId, size_t msgSize, EffectArgs& effectArgs
         break;
 
         /* BPM */
-        case 'p':
+        case 1:
         {
             LOGN("BPM");
             byte arg = Serial.read();
@@ -286,10 +198,32 @@ ByteBuffer ParseEffectArgs(byte effectId, size_t msgSize, EffectArgs& effectArgs
             argBuffer.PutByte(arg);
         }
         break;
-    }
 
-    effectArgs.ArgBuffer = argBuffer;
-    return argBuffer;
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+        case 6:
+        case 7:
+        case 8:
+        case 9:
+        case 10:
+        case 11:
+        {
+            byte arg = Serial.read();
+            effectArgs.NumArgs++;
+            argBuffer.PutByte(arg);
+        }
+        break;
+        
+        case 49:
+        {
+            byte arg = Serial.read();
+            effectArgs.NumArgs++;
+            argBuffer.PutByte(arg);
+            Serial.flush();
+        }break;
+    }
 }
 #endif
 

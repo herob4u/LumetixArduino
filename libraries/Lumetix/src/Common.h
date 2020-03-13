@@ -54,7 +54,7 @@ static inline bool IsNearlyEqual(float A, float B, float threshold = EPSILON)
 }
 
 /* Comment out for "release".*/
-#define DEBUG_MODE
+//#define DEBUG_MODE
 #ifdef DEBUG_MODE
     #define LOG(x) Serial.print(x)
     #define LOGN(x) Serial.println(x)

@@ -91,14 +91,9 @@ public:
     void TurnOn(bool bImmediate = false);
 
     bool bInterpolates;
-    bool bOvershoots;
 private:
     byte BlendBrightness(byte prevVal, byte newVal, EUpdateMode updateMode) const;
     void UpdateLedBuffer(float deltaTime);
-
-    /* Separated from UpdateLedBuffer for now for debugging accessability */
-    void UpdateOvershoot(float deltaTime);
-    void DetectOvershoot(float brightnessA, float brightnessB);
 private:
     static ELedColor m_ColorMap[NUM_CHANNELS];
 
@@ -107,18 +102,6 @@ private:
     */
     byte m_LedBuffer[EPanel::MAX_VAL][NUM_CHANNELS];
     byte m_CurrLedBuffer[EPanel::MAX_VAL][NUM_CHANNELS];
-
-    /* A certain somebody demanded overshoot. We shall govern that using a percentage overshoot
-    *  that shrinks to 0 over time, dictated by some animation curve to control ease in/out.
-    *  Overshoot is detected based on the rate of change of LED brightnesses. Namely, the maximum
-    *  rate of change across all 64 LEDs. Failing to do so will produce overshoots all time when
-    *  performing small adjustments.
-    */
-    float m_PctOvershoot;
-    float m_CurrOvershoot;
-    float m_OvershootProgress;
-    float m_OvershootDetectThreshold;
-    Curve m_OvershootAnimCurve;
 
     float m_TransitionSpeed;
 

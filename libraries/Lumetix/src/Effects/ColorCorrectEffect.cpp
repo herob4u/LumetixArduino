@@ -12,14 +12,17 @@ static const float s_DefaultBIntensity = .3f;
 ColorCorrectEffect::ColorCorrectEffect()
     : EffectBase(EffectType::VIDEO_EFFECT)
     , RBf(1.f)
-    , RIntensityMultiplier(s_DefaultRIntensity)
-    , BIntensityMultiplier(s_DefaultBIntensity)
+    , RIntensityMultiplier(1.f)
+    , BIntensityMultiplier(1.f)
+    , WIntensityMultiplier(0.5f)
     , WarmResponse(RBf, s_DefaultMinResponse, s_DefaultMaxResponse)
     , CoolResponse(RBf, s_DefaultMinResponse, s_DefaultMaxResponse)
+    , RedResponse(RBf, s_DefaultMinResponse, s_DefaultMaxResponse)
 {
     // Init Curves...
     Curve CoolResponseCurve(W_CoolWarmResponse, KARR_LEN(W_CoolWarmResponse));
     Curve WarmResponseCurve(Y_CoolWarmResponse, KARR_LEN(Y_CoolWarmResponse));
+    Curve RedResponseCurve(R_CCResponse, KARR_LEN(R_CCResponse));
 
     // Just in case...
     CoolResponseCurve.Rebuild();
@@ -27,6 +30,7 @@ ColorCorrectEffect::ColorCorrectEffect()
 
     CoolResponse.SetResponseCurve(CoolResponseCurve);
     WarmResponse.SetResponseCurve(WarmResponseCurve);
+    RedResponse.SetResponseCurve(RedResponseCurve);
 }
 
 void ColorCorrectEffect::OnApplied()
@@ -53,23 +57,23 @@ void ColorCorrectEffect::OnUpdate(float deltaTime)
 
     float W_response = CoolResponse.GetValue();
     float Y_response = WarmResponse.GetValue();
+    float R_response = RedResponse.GetValue();
 
     LOG("Parameter t = "); LOGN(CoolResponse.DebugGetParameter());
     LOG("Cool Response Value = "); LOGN(W_response);
     LOG("Warm Response Value = "); LOGN(Y_response);
 
     // Proportionally Attenuated Response
-    W_response *= RIntensityMultiplier;
-    Y_response *= BIntensityMultiplier;
+    W_response *= BIntensityMultiplier;
+    Y_response *= RIntensityMultiplier;
 
     float Yellow_Resp = max(W_response, Y_response);
 
-    float R_response = Y_response;
     float B_response = max(W_response, Y_response);
     float G_response = max(W_response, Y_response);
 
     LedPanel& ledPanel = gContext->Panel;
-    ledPanel.SetBrightness(ELedColor::WHITE, ceil(W_response * 255));
+    ledPanel.SetBrightness(ELedColor::WHITE, ceil(W_response * WIntensityMultiplier * 255));
     ledPanel.SetBrightness(ELedColor::YELLOW, ceil(Yellow_Resp * 255));
     ledPanel.SetBrightness(ELedColor::RED, ceil(R_response * 255));
     ledPanel.SetBrightness(ELedColor::GREEN, ceil(G_response * 255));
@@ -112,32 +116,6 @@ void ColorCorrectEffect::Calibrate()
 void ColorCorrectEffect::OnSetArgs(EffectArgs& args)
 {
     // Expecting 1 argument, telling us the new average RBf value OR a symbol for calibration
-    /*
-    if(args.NumArgs == 1)
-    {
-        // See if the message is an already calibrated value for RBf
-        ByteBuffer buffer = args.ArgBuffer;
-        if(buffer.GetNumBytes() == sizeof(float))
-        {
-            float RBfAvg = buffer.GetFloat();
-
-            float newMin = 0.f;
-            float newMax = RBfAvg * 2.f;
-
-            CoolResponse.ResetRange(newMin, newMax);
-            WarmResponse.ResetRange(newMin, newMax);
-        }
-        else if(buffer.GetNumBytes() == sizeof(char))
-        {
-            // We received a calibration notice instead.
-            char c = buffer.GetChar();
-            if(c == CALIBRATE_SYMBOL)
-            {
-                Calibrate();
-            }
-        }
-    }
-    */
     if(args.NumArgs == 1)
     {
         if(args.ArgBuffer.GetNumBytes() == sizeof(char))

@@ -11,6 +11,9 @@ struct ByteBuffer
 {
     static ByteBuffer Allocate(size_t numBytes);
     ~ByteBuffer();
+    ByteBuffer& operator=(const ByteBuffer& Other) = delete;
+
+    ByteBuffer& Resize(size_t numBytes);
 
     ByteBuffer& PutByte(byte b);
     ByteBuffer& PutInt(long i);  // IMPORTANT. Size mismatch between Arduino and Android possible. Be explicit! (uint32_t ?). "FIXED": Using long for 4-bytes

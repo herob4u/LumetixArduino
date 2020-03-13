@@ -2,7 +2,7 @@
 
 ColorFilterEffect::ColorFilterEffect()
     : EffectBase(EffectType::PHOTO_EFFECT)
-    , m_ActiveFilter(FilterType::RED_BLUE)
+    , m_ActiveFilter(FilterType::TYPE10)
     , m_StrobeFrequency(0.f)
     , m_StrobeOffset(0.f)
     , m_StrobeAmplitude(1.f)
@@ -13,8 +13,6 @@ ColorFilterEffect::ColorFilterEffect()
 
 void ColorFilterEffect::OnApplied()
 {
-    LOGN("Color Filter Applied");
-
     // We probably want this mode to be immediate because the strobing is a result of
     // sinusoidal modulations. Safe the previous state of the panel to restore it later.
     LedPanel& panel = gContext->Panel;
@@ -25,15 +23,15 @@ void ColorFilterEffect::OnApplied()
 
 void ColorFilterEffect::OnUpdate(float deltaTime)
 {
-    if(m_StrobeFrequency == 0 || m_StrobeAmplitude == 0)
+    if(IsNearlyEqual(m_StrobeFrequency, 0.f, 0.01f) == 0 || m_StrobeAmplitude == 0)
         return;
 
     m_Time += deltaTime;
 
-    if(m_Time > m_StrobeFrequency)
+    if(m_Time > 2 * m_StrobeFrequency)
         m_Time = 0.f;
 
-    float strobeBrightness = m_Intensity * cos(m_StrobeFrequency * m_Time);
+    float strobeBrightness = m_Intensity * Abs(cos(2 * m_StrobeFrequency * m_Time));
     strobeBrightness = Clamp(m_StrobeAmplitude * strobeBrightness + m_StrobeOffset, 0.01f, 254.9f);
 
     ApplyFilter((byte)strobeBrightness);
